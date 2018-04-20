@@ -1,7 +1,7 @@
 /**
  *  Modbus host example 2:
  *  The purpose of this example is to query an array of data
- *  from an external Modbus device device.
+ *  from an external Modbus device.
  *  This example is similar to "simple_host", but this example
  *  allows you to use software serial instead of hardware serial
  *  in case that you want to use D1 & D2 for other purposes.
@@ -58,7 +58,7 @@ uint8_t u8state;
 Modbus host(0); // this is host and RS-232 or USB-FTDI via software serial
 
 /**
- * This is an structe which contains a query to an device device
+ * This is a struct which contains a query to a device
  */
 modbus_t telegram;
 

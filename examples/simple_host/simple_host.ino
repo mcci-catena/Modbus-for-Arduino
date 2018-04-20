@@ -1,7 +1,7 @@
 /**
  *  Modbus host example 1:
  *  The purpose of this example is to query an array of data
- *  from an external Modbus device device. 
+ *  from an external Modbus device. 
  *  The link media can be USB or RS232.
  *
  *  Recommended Modbus device: 
@@ -27,17 +27,18 @@ uint8_t u8state;
  *  u8txenpin : 0 for RS-232 and USB-FTDI 
  *               or any pin number > 1 for RS-485
  */
-Modbus host(0,0,0); // this is host and RS-232 or USB-FTDI
+Modbus host(0, A4); // this is host and RS-232 or USB-FTDI
+ModbusSerial<decltype(Serial1)> mySerial(&Serial1);
 
 /**
- * This is an structe which contains a query to an device device
+ * This is a struct which contains a query to a device
  */
 modbus_t telegram;
 
 unsigned long u32wait;
 
 void setup() {
-  host.begin( 19200 ); // baud-rate at 19200
+  host.begin(&mySerial, 9600); // baud-rate at 19200
   host.setTimeOut( 2000 ); // if there is no answer in 2000 ms, roll over
   u32wait = millis() + 1000;
   u8state = 0; 
@@ -51,7 +52,7 @@ void loop() {
   case 1: 
     telegram.u8id = 1; // device address
     telegram.u8fct = 3; // function code (this one is registers read)
-    telegram.u16RegAdd = 1; // start address in device
+    telegram.u16RegAdd = 1700; // start address in device
     telegram.u16CoilsNo = 4; // number of elements (coils or registers) to read
     telegram.au16reg = au16data; // pointer to a memory array in the Arduino
 
@@ -62,6 +63,14 @@ void loop() {
     host.poll(); // check incoming messages
     if (host.getState() == COM_IDLE) {
       u8state = 0;
+      Serial.print("Registers: ");
+      for (int i=0; i < 4; ++i)
+        {
+        Serial.print(" ");
+        Serial.print(au16data[i], 16);
+        }
+      Serial.println("");
+
       u32wait = millis() + 100; 
     }
     break;

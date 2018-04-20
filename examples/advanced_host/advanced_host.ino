@@ -1,7 +1,7 @@
 /**
  *  Modbus host example 2:
  *  The purpose of this example is to query several sets of data
- *  from an external Modbus device device. 
+ *  from an external Modbus device. 
  *  The link media can be USB or RS232.
  *
  *  Recommended Modbus device: 
@@ -30,7 +30,7 @@ uint8_t u8query; //!< pointer to message query
 Modbus host(0,0,0); // this is host and RS-232 or USB-FTDI
 
 /**
- * This is an structe which contains a query to an device device
+ * This is a struct which contains a query to a device
  */
 modbus_t telegram[2];
 

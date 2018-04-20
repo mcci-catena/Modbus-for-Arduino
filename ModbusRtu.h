@@ -40,7 +40,7 @@
 #include <inttypes.h>
 #include "Arduino.h"
 #include "Print.h"
-#include <SoftwareSerial.h>
+#include "ModbusPort.h"
 
 /**
  * @struct modbus_t
@@ -154,24 +154,22 @@ const unsigned char fctsupported[] =
 class Modbus
 {
 private:
-    HardwareSerial *port; //!< Pointer to Serial class object
-    SoftwareSerial *softPort; //!< Pointer to SoftwareSerial class object
+    ModbusPort *port; //!< pointer to the "port" wrapper object.
     uint8_t u8id; //!< 0=host, 1..247=device number
-    uint8_t u8serno; //!< serial port: 0-Serial, 1..3-Serial1..Serial3; 4: use software serial
     uint8_t u8txenpin; //!< flow control pin: 0=USB or RS-232 mode, >0=RS-485 mode
     uint8_t u8state;
     uint8_t u8lastError;
     uint8_t au8Buffer[MAX_BUFFER];
     uint8_t u8BufferSize;
-    uint8_t u8lastRec;
+    uint8_t lastRec;
     uint16_t *au16regs;
     uint16_t u16InCnt, u16OutCnt, u16errCnt;
     uint16_t u16timeOut;
     uint32_t u32time, u32timeOut;
     uint8_t u8regsize;
 
-    void init(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin);
-	void init(uint8_t u8id);
+    void init(uint8_t u8id, uint8_t u8txenpin);
+    void init(uint8_t u8id);
     void sendTxBuffer();
     int8_t getRxBuffer();
     uint16_t calcCRC(uint8_t u8length);
@@ -189,13 +187,10 @@ private:
 
 public:
     Modbus();
-    Modbus(uint8_t u8id, uint8_t u8serno);
-    Modbus(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin);
     Modbus(uint8_t u8id);
-    void begin(long u32speed);
-    void begin(SoftwareSerial *sPort, long u32speed);
-    void begin(long u32speed, uint8_t u8config);
-    void begin();
+    Modbus(uint8_t u8id, uint8_t u8txenpin);
+    void begin(ModbusPort *pPort, unsigned long u32speed);
+    void begin(ModbusPort *pPort, unsigned long u32speed, uint16_t u8config);
     void setTimeOut( uint16_t u16timeout); //!<write communication watch-dog timer
     uint16_t getTimeOut(); //!<get communication watch-dog timer value
     boolean getTimeOutState(); //!<get communication watch-dog timer state
@@ -216,29 +211,27 @@ public:
 
 /**
  * @brief
- * Default Constructor for host through Serial
+ * Default Constructor: make a host, no rx/tx control
  *
  * @ingroup setup
  */
 Modbus::Modbus()
 {
-    init(0, 0, 0);
+    init(0, 0);
 }
 
 /**
  * @brief
- * Full constructor for a host/device through USB/RS232C
+ * Full constructor for a host/device through USB/RS232C, no rx/tx control
  *
  * @param u8id   node address 0=host, 1..247=device
- * @param u8serno  serial port used 0..3
  * @ingroup setup
- * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8serno)
  * @overload Modbus::Modbus(uint8_t u8id)
  * @overload Modbus::Modbus()
  */
-Modbus::Modbus(uint8_t u8id, uint8_t u8serno)
+Modbus::Modbus(uint8_t u8id)
 {
-    init(u8id, u8serno, 0);
+    init(u8id, 0);
 }
 
 /**
@@ -247,40 +240,20 @@ Modbus::Modbus(uint8_t u8id, uint8_t u8serno)
  * It needs a pin for flow control only for RS485 mode
  *
  * @param u8id   node address 0=host, 1..247=device
- * @param u8serno  serial port used 0..3
  * @param u8txenpin pin for txen RS-485 (=0 means USB/RS232C mode)
  * @ingroup setup
- * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin)
+ * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8txenpin)
  * @overload Modbus::Modbus(uint8_t u8id)
  * @overload Modbus::Modbus()
  */
-Modbus::Modbus(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin)
+Modbus::Modbus(uint8_t u8id, uint8_t u8txenpin)
 {
-    init(u8id, u8serno, u8txenpin);
+    init(u8id, u8txenpin);
 }
 
 /**
  * @brief
- * Constructor for a host/device through USB/RS232C via software serial
- * This constructor only specifies u8id (node address) and should be only
- * used if you want to use software serial instead of hardware serial.
- * If you use this constructor you have to begin ModBus object by
- * using "void Modbus::begin(SoftwareSerial *softPort, long u32speed)".
- *
- * @param u8id   node address 0=host, 1..247=device
- * @ingroup setup
- * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin)
- * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8serno)
- * @overload Modbus::Modbus()
- */
-Modbus::Modbus(uint8_t u8id)
-{
-    init(u8id);
-}
-
-/**
- * @brief
- * Initialize class object.
+ * Start class object.
  *
  * Sets up the serial port using specified baud rate.
  * Call once class has been instantiated, typically within setup().
@@ -289,75 +262,9 @@ Modbus::Modbus(uint8_t u8id)
  * @param speed   baud rate, in standard increments (300..115200)
  * @ingroup setup
  */
-void Modbus::begin(long u32speed)
+void Modbus::begin(ModbusPort *pPort, unsigned long u32speed)
 {
-
-    switch( u8serno )
-    {
-#if defined(UBRR1H)
-    case 1:
-        port = &Serial1;
-        break;
-#endif
-
-#if defined(UBRR2H)
-    case 2:
-        port = &Serial2;
-        break;
-#endif
-
-#if defined(UBRR3H)
-    case 3:
-        port = &Serial3;
-        break;
-#endif
-    case 0:
-    default:
-        port = &Serial;
-        break;
-    }
-
-    port->begin(u32speed);
-    if (u8txenpin > 1)   // pin 0 & pin 1 are reserved for RX/TX
-    {
-        // return RS485 transceiver to transmit mode
-        pinMode(u8txenpin, OUTPUT);
-        digitalWrite(u8txenpin, LOW);
-    }
-
-    while(port->read() >= 0);
-    u8lastRec = u8BufferSize = 0;
-    u16InCnt = u16OutCnt = u16errCnt = 0;
-}
-
-/**
- * @brief
- * Initialize class object.
- *
- * Sets up the software serial port using specified baud rate and SoftwareSerial object.
- * Call once class has been instantiated, typically within setup().
- *
- * @param speed   *softPort, pointer to SoftwareSerial class object
- * @param speed   baud rate, in standard increments (300..115200)
- * @ingroup setup
- */
-void Modbus::begin(SoftwareSerial *sPort, long u32speed)
-{
-
-    softPort=sPort;
-
-    softPort->begin(u32speed);
-
-    if (u8txenpin > 1)   // pin 0 & pin 1 are reserved for RX/TX
-    {
-        // return RS485 transceiver to transmit mode
-        pinMode(u8txenpin, OUTPUT);
-        digitalWrite(u8txenpin, LOW);
-    }
-
-    while(softPort->read() >= 0);
-    u8lastRec = u8BufferSize = 0;
-    u16InCnt = u16OutCnt = u16errCnt = 0;
+    this->begin(pPort, u32speed, SERIAL_8N2);
 }
 
 /**
@@ -372,60 +279,23 @@ void Modbus::begin(SoftwareSerial *sPort, long u32speed)
  * @param config  data frame settings (data length, parity and stop bits)
  * @ingroup setup
  */
-void Modbus::begin(long u32speed,uint8_t u8config)
+void Modbus::begin(ModbusPort *pPort, unsigned long u32speed, uint16_t config)
 {
 
-    switch( u8serno )
-    {
-#if defined(UBRR1H)
-    case 1:
-        port = &Serial1;
-        break;
-#endif
+    port = pPort;
 
-#if defined(UBRR2H)
-    case 2:
-        port = &Serial2;
-        break;
-#endif
+    port->begin(u32speed, config);
 
-#if defined(UBRR3H)
-    case 3:
-        port = &Serial3;
-        break;
-#endif
-    case 0:
-    default:
-        port = &Serial;
-        break;
-    }
-
-    port->begin(u32speed, u8config);
     if (u8txenpin > 1)   // pin 0 & pin 1 are reserved for RX/TX
     {
-        // return RS485 transceiver to transmit mode
+        // return RS485 transceiver to receive mode
         pinMode(u8txenpin, OUTPUT);
         digitalWrite(u8txenpin, LOW);
     }
 
-    while(port->read() >= 0);
-    u8lastRec = u8BufferSize = 0;
+    port->drainRead();
+    lastRec = u8BufferSize = 0;
     u16InCnt = u16OutCnt = u16errCnt = 0;
-}
-
-/**
- * @brief
- * Initialize default class object.
- *
- * Sets up the serial port using 19200 baud.
- * Call once class has been instantiated, typically within setup().
- *
- * @overload Modbus::begin(uint16_t u16BaudRate)
- * @ingroup setup
- */
-void Modbus::begin()
-{
-    begin(19200);
 }
 
 /**
@@ -481,7 +351,7 @@ void Modbus::setTimeOut( uint16_t u16timeOut)
  */
 boolean Modbus::getTimeOutState()
 {
-    return (millis() > u32timeOut);
+    return ((int32_t)(millis() - u32timeOut) > 0);
 }
 
 /**
@@ -551,7 +421,7 @@ uint8_t Modbus::getLastError()
 /**
  * @brief
  * *** Only Modbus host ***
- * Generate a query to an device with a modbus_t telegram structure
+ * Generate a query to a device with a modbus_t telegram structure
  * The host must be in COM_IDLE mode. After it, its state would be COM_WAITING.
  * This method has to be called only in loop() section.
  *
@@ -656,13 +526,10 @@ int8_t Modbus::query( modbus_t telegram )
 int8_t Modbus::poll()
 {
     // check if there is any incoming frame
-	uint8_t u8current;
-    if(u8serno<4)
-        u8current = port->available();
-    else
-        u8current = softPort->available();
+    int current;
+    current = port->available();
 
-    if (millis() > u32timeOut)
+    if (this->getTimeOutState())
     {
         u8state = COM_IDLE;
         u8lastError = NO_REPLY;
@@ -670,19 +537,19 @@ int8_t Modbus::poll()
         return 0;
     }
 
-    if (u8current == 0) return 0;
+    if (current == 0) return 0;
 
     // check T35 after frame end or still no frame end
-    if (u8current != u8lastRec)
+    if (current != lastRec)
     {
-        u8lastRec = u8current;
+        lastRec = current;
         u32time = millis() + T35;
         return 0;
     }
     if (millis() < u32time) return 0;
 
     // transfer Serial buffer frame to auBuffer
-    u8lastRec = 0;
+    lastRec = 0;
     int8_t i8state = getRxBuffer();
     if (i8state < 7)
     {
@@ -743,27 +610,24 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
 
     au16regs = regs;
     u8regsize = u8size;
-	uint8_t u8current;
+    int current;
 
 
     // check if there is any incoming frame
-    if(u8serno<4)
-        u8current = port->available();
-    else
-        u8current = softPort->available();
+    current = port->available();
 
-    if (u8current == 0) return 0;
+    if (current == 0) return 0;
 
     // check T35 after frame end or still no frame end
-    if (u8current != u8lastRec)
+    if (current != lastRec)
     {
-        u8lastRec = u8current;
+        lastRec = current;
         u32time = millis() + T35;
         return 0;
     }
     if (millis() < u32time) return 0;
 
-    u8lastRec = 0;
+    lastRec = 0;
     int8_t i8state = getRxBuffer();
     u8lastError = i8state;
     if (i8state < 7) return i8state;
@@ -818,10 +682,9 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
 
 /* _____PRIVATE FUNCTIONS_____________________________________________________ */
 
-void Modbus::init(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin)
+void Modbus::init(uint8_t u8id, uint8_t u8txenpin)
 {
     this->u8id = u8id;
-    this->u8serno = (u8serno > 3) ? 0 : u8serno;
     this->u8txenpin = u8txenpin;
     this->u16timeOut = 1000;
 }
@@ -829,7 +692,6 @@ void Modbus::init(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin)
 void Modbus::init(uint8_t u8id)
 {
     this->u8id = u8id;
-    this->u8serno = 4;
     this->u8txenpin = 0;
     this->u16timeOut = 1000;
 }
@@ -848,18 +710,9 @@ int8_t Modbus::getRxBuffer()
     if (u8txenpin > 1) digitalWrite( u8txenpin, LOW );
 
     u8BufferSize = 0;
-    if(u8serno<4)
-        while ( port->available() )
+    while ( port->available() )
         {
             au8Buffer[ u8BufferSize ] = port->read();
-            u8BufferSize ++;
-
-            if (u8BufferSize >= MAX_BUFFER) bBuffOverflow = true;
-        }
-    else
-        while ( softPort->available() )
-        {
-            au8Buffer[ u8BufferSize ] = softPort->read();
             u8BufferSize ++;
 
             if (u8BufferSize >= MAX_BUFFER) bBuffOverflow = true;
@@ -900,79 +753,26 @@ void Modbus::sendTxBuffer()
     // set RS485 transceiver to transmit mode
     if (u8txenpin > 1)
     {
-        switch( u8serno )
-        {
-#if defined(UBRR1H)
-        case 1:
-            UCSR1A=UCSR1A |(1 << TXC1);
-            break;
-#endif
-
-#if defined(UBRR2H)
-        case 2:
-            UCSR2A=UCSR2A |(1 << TXC2);
-            break;
-#endif
-
-#if defined(UBRR3H)
-        case 3:
-            UCSR3A=UCSR3A |(1 << TXC3);
-            break;
-#endif
-        case 0:
-        default:
-            UCSR0A=UCSR0A |(1 << TXC0);
-            break;
-        }
         digitalWrite( u8txenpin, HIGH );
     }
 
     // transfer buffer to serial line
-    if(u8serno<4)
-        port->write( au8Buffer, u8BufferSize );
-    else
-        softPort->write( au8Buffer, u8BufferSize );
+    port->write( au8Buffer, u8BufferSize );
 
     // keep RS485 transceiver in transmit mode as long as sending
     if (u8txenpin > 1)
     {
-        switch( u8serno )
-        {
-#if defined(UBRR1H)
-        case 1:
-            while (!(UCSR1A & (1 << TXC1)));
-            break;
-#endif
-
-#if defined(UBRR2H)
-        case 2:
-            while (!(UCSR2A & (1 << TXC2)));
-            break;
-#endif
-
-#if defined(UBRR3H)
-        case 3:
-            while (!(UCSR3A & (1 << TXC3)));
-            break;
-#endif
-        case 0:
-        default:
-            while (!(UCSR0A & (1 << TXC0)));
-            break;
-        }
+        port->drainWrite();
 
         // return RS485 transceiver to receive mode
         digitalWrite( u8txenpin, LOW );
     }
-    if(u8serno<4)
-        while(port->read() >= 0);
-    else
-        while(softPort->read() >= 0);
+    port->drainRead();
 
     u8BufferSize = 0;
 
     // set time-out for host
-    u32timeOut = millis() + (unsigned long) u16timeOut;
+    u32timeOut = millis() + (uint32_t) u16timeOut;
 
     // increase message counter
     u16OutCnt++;
