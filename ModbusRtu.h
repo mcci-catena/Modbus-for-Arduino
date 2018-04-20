@@ -45,18 +45,18 @@
 /**
  * @struct modbus_t
  * @brief
- * Master query structure:
- * This includes all the necessary fields to make the Master generate a Modbus query.
- * A Master may keep several of these structures and send them cyclically or
+ * host query structure:
+ * This includes all the necessary fields to make the host generate a Modbus query.
+ * A host may keep several of these structures and send them cyclically or
  * use them according to program needs.
  */
 typedef struct
 {
-    uint8_t u8id;          /*!< Slave address between 1 and 247. 0 means broadcast */
+    uint8_t u8id;          /*!< device address between 1 and 247. 0 means broadcast */
     uint8_t u8fct;         /*!< Function code: 1, 2, 3, 4, 5, 6, 15 or 16 */
-    uint16_t u16RegAdd;    /*!< Address of the first register to access at slave/s */
+    uint16_t u16RegAdd;    /*!< Address of the first register to access at device/s */
     uint16_t u16CoilsNo;   /*!< Number of coils or registers to access */
-    uint16_t *au16reg;     /*!< Pointer to memory image in master */
+    uint16_t *au16reg;     /*!< Pointer to memory image in host */
 }
 modbus_t;
 
@@ -87,7 +87,7 @@ enum MESSAGE
  * @enum MB_FC
  * @brief
  * Modbus function codes summary.
- * These are the implement function codes either for Master or for Slave.
+ * These are the implement function codes either for host or for device.
  *
  * @see also fctsupported
  * @see also modbus_t
@@ -114,7 +114,7 @@ enum COM_STATES
 
 enum ERR_LIST
 {
-    ERR_NOT_MASTER                = -1,
+    ERR_NOT_HOST                  = -1,
     ERR_POLLING                   = -2,
     ERR_BUFF_OVERFLOW             = -3,
     ERR_BAD_CRC                   = -4,
@@ -156,7 +156,7 @@ class Modbus
 private:
     HardwareSerial *port; //!< Pointer to Serial class object
     SoftwareSerial *softPort; //!< Pointer to SoftwareSerial class object
-    uint8_t u8id; //!< 0=master, 1..247=slave number
+    uint8_t u8id; //!< 0=host, 1..247=device number
     uint8_t u8serno; //!< serial port: 0-Serial, 1..3-Serial1..Serial3; 4: use software serial
     uint8_t u8txenpin; //!< flow control pin: 0=USB or RS-232 mode, >0=RS-485 mode
     uint8_t u8state;
@@ -199,16 +199,16 @@ public:
     void setTimeOut( uint16_t u16timeout); //!<write communication watch-dog timer
     uint16_t getTimeOut(); //!<get communication watch-dog timer value
     boolean getTimeOutState(); //!<get communication watch-dog timer state
-    int8_t query( modbus_t telegram ); //!<only for master
-    int8_t poll(); //!<cyclic poll for master
-    int8_t poll( uint16_t *regs, uint8_t u8size ); //!<cyclic poll for slave
+    int8_t query( modbus_t telegram ); //!<only for host
+    int8_t poll(); //!<cyclic poll for host
+    int8_t poll( uint16_t *regs, uint8_t u8size ); //!<cyclic poll for device
     uint16_t getInCnt(); //!<number of incoming messages
     uint16_t getOutCnt(); //!<number of outcoming messages
     uint16_t getErrCnt(); //!<error counter
-    uint8_t getID(); //!<get slave ID between 1 and 247
+    uint8_t getID(); //!<get device ID between 1 and 247
     uint8_t getState();
     uint8_t getLastError(); //!<get last error message
-    void setID( uint8_t u8id ); //!<write new ID for the slave
+    void setID( uint8_t u8id ); //!<write new ID for the device
     void end(); //!<finish any communication and release serial communication port
 };
 
@@ -216,7 +216,7 @@ public:
 
 /**
  * @brief
- * Default Constructor for Master through Serial
+ * Default Constructor for host through Serial
  *
  * @ingroup setup
  */
@@ -227,9 +227,9 @@ Modbus::Modbus()
 
 /**
  * @brief
- * Full constructor for a Master/Slave through USB/RS232C
+ * Full constructor for a host/device through USB/RS232C
  *
- * @param u8id   node address 0=master, 1..247=slave
+ * @param u8id   node address 0=host, 1..247=device
  * @param u8serno  serial port used 0..3
  * @ingroup setup
  * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8serno)
@@ -243,10 +243,10 @@ Modbus::Modbus(uint8_t u8id, uint8_t u8serno)
 
 /**
  * @brief
- * Full constructor for a Master/Slave through USB/RS232C/RS485
+ * Full constructor for a host/device through USB/RS232C/RS485
  * It needs a pin for flow control only for RS485 mode
  *
- * @param u8id   node address 0=master, 1..247=slave
+ * @param u8id   node address 0=host, 1..247=device
  * @param u8serno  serial port used 0..3
  * @param u8txenpin pin for txen RS-485 (=0 means USB/RS232C mode)
  * @ingroup setup
@@ -261,13 +261,13 @@ Modbus::Modbus(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin)
 
 /**
  * @brief
- * Constructor for a Master/Slave through USB/RS232C via software serial
+ * Constructor for a host/device through USB/RS232C via software serial
  * This constructor only specifies u8id (node address) and should be only
  * used if you want to use software serial instead of hardware serial.
  * If you use this constructor you have to begin ModBus object by
  * using "void Modbus::begin(SoftwareSerial *softPort, long u32speed)".
  *
- * @param u8id   node address 0=master, 1..247=slave
+ * @param u8id   node address 0=host, 1..247=device
  * @ingroup setup
  * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8serno, uint8_t u8txenpin)
  * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8serno)
@@ -430,9 +430,9 @@ void Modbus::begin()
 
 /**
  * @brief
- * Method to write a new slave ID address
+ * Method to write a new device ID address
  *
- * @param 	u8id	new slave address between 1 and 247
+ * @param 	u8id	new device address between 1 and 247
  * @ingroup setup
  */
 void Modbus::setID( uint8_t u8id)
@@ -445,9 +445,9 @@ void Modbus::setID( uint8_t u8id)
 
 /**
  * @brief
- * Method to read current slave ID address
+ * Method to read current device ID address
  *
- * @return u8id	current slave address between 1 and 247
+ * @return u8id	current device address between 1 and 247
  * @ingroup setup
  */
 uint8_t Modbus::getID()
@@ -461,7 +461,7 @@ uint8_t Modbus::getID()
  *
  * Call once class has been instantiated, typically within setup().
  * The time-out timer is reset each time that there is a successful communication
- * between Master and Slave. It works for both.
+ * between host and device. It works for both.
  *
  * @param time-out value (ms)
  * @ingroup setup
@@ -524,7 +524,7 @@ uint16_t Modbus::getErrCnt()
 }
 
 /**
- * Get modbus master state
+ * Get modbus host state
  *
  * @return = 0 IDLE, = 1 WAITING FOR ANSWER
  * @ingroup buffer
@@ -550,9 +550,9 @@ uint8_t Modbus::getLastError()
 
 /**
  * @brief
- * *** Only Modbus Master ***
- * Generate a query to an slave with a modbus_t telegram structure
- * The Master must be in COM_IDLE mode. After it, its state would be COM_WAITING.
+ * *** Only Modbus host ***
+ * Generate a query to an device with a modbus_t telegram structure
+ * The host must be in COM_IDLE mode. After it, its state would be COM_WAITING.
  * This method has to be called only in loop() section.
  *
  * @see modbus_t
@@ -640,9 +640,9 @@ int8_t Modbus::query( modbus_t telegram )
 }
 
 /**
- * @brief *** Only for Modbus Master ***
+ * @brief *** Only for Modbus host ***
  * This method checks if there is any incoming answer if pending.
- * If there is no answer, it would change Master state to COM_IDLE.
+ * If there is no answer, it would change host state to COM_IDLE.
  * This method must be called only at loop section.
  * Avoid any delay() function.
  *
@@ -727,11 +727,11 @@ int8_t Modbus::poll()
 
 /**
  * @brief
- * *** Only for Modbus Slave ***
+ * *** Only for Modbus device ***
  * This method checks if there is any incoming query
  * Afterwards, it would shoot a validation routine plus a register query
  * Avoid any delay() function !!!!
- * After a successful frame between the Master and the Slave, the time-out timer is reset.
+ * After a successful frame between the host and the device, the time-out timer is reset.
  *
  * @param *regs  register table for communication exchange
  * @param u8size  size of the register table
@@ -768,7 +768,7 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
     u8lastError = i8state;
     if (i8state < 7) return i8state;
 
-    // check slave id
+    // check device id
     if (au8Buffer[ ID ] != u8id) return 0;
 
     // validate message: CRC, FCT, address and size
@@ -971,7 +971,7 @@ void Modbus::sendTxBuffer()
 
     u8BufferSize = 0;
 
-    // set time-out for master
+    // set time-out for host
     u32timeOut = millis() + (unsigned long) u16timeOut;
 
     // increase message counter
@@ -1011,7 +1011,7 @@ uint16_t Modbus::calcCRC(uint8_t u8length)
 
 /**
  * @brief
- * This method validates slave incoming messages
+ * This method validates device incoming messages
  *
  * @return 0 if OK, EXCEPTION if anything fails
  * @ingroup buffer
@@ -1081,7 +1081,7 @@ uint8_t Modbus::validateRequest()
 
 /**
  * @brief
- * This method validates master incoming messages
+ * This method validates host incoming messages
  *
  * @return 0 if OK, EXCEPTION if anything fails
  * @ingroup buffer
@@ -1141,8 +1141,8 @@ void Modbus::buildException( uint8_t u8exception )
 }
 
 /**
- * This method processes functions 1 & 2 (for master)
- * This method puts the slave answer into master data buffer
+ * This method processes functions 1 & 2 (for host)
+ * This method puts the device answer into host data buffer
  *
  * @ingroup register
  * TODO: finish its implementation
@@ -1161,8 +1161,8 @@ void Modbus::get_FC1()
 }
 
 /**
- * This method processes functions 3 & 4 (for master)
- * This method puts the slave answer into master data buffer
+ * This method processes functions 3 & 4 (for host)
+ * This method puts the device answer into host data buffer
  *
  * @ingroup register
  */
@@ -1183,9 +1183,9 @@ void Modbus::get_FC3()
 /**
  * @brief
  * This method processes functions 1 & 2
- * This method reads a bit array and transfers it to the master
+ * This method reads a bit array and transfers it to the host
  *
- * @return u8BufferSize Response to master length
+ * @return u8BufferSize Response to host length
  * @ingroup discrete
  */
 int8_t Modbus::process_FC1( uint16_t *regs, uint8_t u8size )
@@ -1236,9 +1236,9 @@ int8_t Modbus::process_FC1( uint16_t *regs, uint8_t u8size )
 /**
  * @brief
  * This method processes functions 3 & 4
- * This method reads a word array and transfers it to the master
+ * This method reads a word array and transfers it to the host
  *
- * @return u8BufferSize Response to master length
+ * @return u8BufferSize Response to host length
  * @ingroup register
  */
 int8_t Modbus::process_FC3( uint16_t *regs, uint8_t u8size )
@@ -1268,9 +1268,9 @@ int8_t Modbus::process_FC3( uint16_t *regs, uint8_t u8size )
 /**
  * @brief
  * This method processes function 5
- * This method writes a value assigned by the master to a single bit
+ * This method writes a value assigned by the host to a single bit
  *
- * @return u8BufferSize Response to master length
+ * @return u8BufferSize Response to host length
  * @ingroup discrete
  */
 int8_t Modbus::process_FC5( uint16_t *regs, uint8_t u8size )
@@ -1290,7 +1290,7 @@ int8_t Modbus::process_FC5( uint16_t *regs, uint8_t u8size )
         au8Buffer[ NB_HI ] == 0xff );
 
 
-    // send answer to master
+    // send answer to host
     u8BufferSize = 6;
     u8CopyBufferSize = u8BufferSize +2;
     sendTxBuffer();
@@ -1301,9 +1301,9 @@ int8_t Modbus::process_FC5( uint16_t *regs, uint8_t u8size )
 /**
  * @brief
  * This method processes function 6
- * This method writes a value assigned by the master to a single word
+ * This method writes a value assigned by the host to a single word
  *
- * @return u8BufferSize Response to master length
+ * @return u8BufferSize Response to host length
  * @ingroup register
  */
 int8_t Modbus::process_FC6( uint16_t *regs, uint8_t u8size )
@@ -1327,9 +1327,9 @@ int8_t Modbus::process_FC6( uint16_t *regs, uint8_t u8size )
 /**
  * @brief
  * This method processes function 15
- * This method writes a bit array assigned by the master
+ * This method writes a bit array assigned by the host
  *
- * @return u8BufferSize Response to master length
+ * @return u8BufferSize Response to host length
  * @ingroup discrete
  */
 int8_t Modbus::process_FC15( uint16_t *regs, uint8_t u8size )
@@ -1383,9 +1383,9 @@ int8_t Modbus::process_FC15( uint16_t *regs, uint8_t u8size )
 /**
  * @brief
  * This method processes function 16
- * This method writes a word array assigned by the master
+ * This method writes a word array assigned by the host
  *
- * @return u8BufferSize Response to master length
+ * @return u8BufferSize Response to host length
  * @ingroup register
  */
 int8_t Modbus::process_FC16( uint16_t *regs, uint8_t u8size )

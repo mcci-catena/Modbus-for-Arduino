@@ -1,5 +1,5 @@
 #######################################
-# Syntax Coloring Map For Modbus-Master-Slave
+# Syntax Coloring Map For Modbus-for-Arduino
 #######################################
 
 #######################################
