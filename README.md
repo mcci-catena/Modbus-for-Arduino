@@ -6,7 +6,7 @@ A primary goal was to enable industrial communication for the Arduino in order t
 
 It supports software serial as well as hardware serial. The initial changes from Helium6072 are generalized so that you can use any object with Serial semantics.
 
-[![GitHub release](https://img.shields.io/github/release/mcci-catena/Modbus-for-Arduino.svg)](https://github.com/mcci-catena/Modbus-for-Arudino/releases/latest) [![GitHub commits](https://img.shields.io/github/commits-since/mcci-catena/Modbus-for-Arduino/latest.svg)](https://github.com/mcci-catena/arduino-lmic/compare/V0.2.0...master)
+[![GitHub release](https://img.shields.io/github/release/mcci-catena/Modbus-for-Arduino.svg)](https://github.com/mcci-catena/Modbus-for-Arudino/releases/latest) [![GitHub commits](https://img.shields.io/github/commits-since/mcci-catena/Modbus-for-Arduino/latest.svg)](https://github.com/mcci-catena/arduino-lmic/compare/V0.2.0-beta1...master)
 
 **Contents:**
 
