@@ -6,11 +6,39 @@ A primary goal was to enable industrial communication for the Arduino in order t
 
 It supports software serial as well as hardware serial. The initial changes from Helium6072 are generalized so that you can use any object with Serial semantics.
 
-### Terminology
+[![GitHub release](https://img.shields.io/github/release/mcci-catena/Modbus-for-Arduino.svg)](https://github.com/mcci-catena/Modbus-for-Arudino/releases/latest) [![GitHub commits](https://img.shields.io/github/commits-since/mcci-catena/Modbus-for-Arduino/latest.svg)](https://github.com/mcci-catena/arduino-lmic/compare/V0.2.0...master)
+
+**Contents:**
+
+<!--
+  This TOC uses the VS Code markdown TOC extension AlanWalk.markdown-toc.
+  We strongly recommend updating using VS Code, the markdown-toc extension and the
+  bierner.markdown-preview-github-styles extension.
+-->
+
+<!-- TOC depthFrom:2 updateOnSave:true -->
+
+- [Terminology](#terminology)
+- [Library Contents](#library-contents)
+	- [Examples](#examples)
+		- [examples/advanced_device](#examplesadvanced_device)
+		- [examples/RS485_device](#examplesrs485_device)
+		- [examples/simple_host](#examplessimple_host)
+		- [examples/simple_device](#examplessimple_device)
+		- [examples/software_serial_simple_host](#examplessoftware_serial_simple_host)
+- [Installation Procedure](#installation-procedure)
+- [Known Issues](#known-issues)
+- [To-Do List](#to-do-list)
+- [Parity, stop bits, etc](#parity-stop-bits-etc)
+- [The `ModbusSerial<>` Template Class](#the-modbusserial-template-class)
+
+<!-- /TOC -->
+
+## Terminology
 
 Modbus literature uses "host" and "slave". Time has moved on, so in this library, we use the terms "initiator" and "responder".
 
-## LIBRARY CONTENTS
+## Library Contents
 
 File | Description
 -----|------------
@@ -42,9 +70,9 @@ Modbus device node with a link array.
 
 Modbus host node that works via software serial.
 
-## INSTALLATION PROCEDURE
+## Installation Procedure
 
-Refer to this documentation to Install this library:
+Refer to this documentation to install this library:
 
 http://arduino.cc/en/Guide/Libraries
 
@@ -62,30 +90,37 @@ The zip file will have been expanded in the libraries folder in your Arduino ske
 
 NB : the library will be available to use in sketches, but examples for the library will not be exposed in the File > Examples until after the IDE has restarted.
 
+## Known Issues
 
-## KNOWN ISSUES
+The original library was not compatible with ARDUINO LEONARDO. This library has not been tested under ARDUINO DUE and newer boards. It has been tested primarily with Adafruit Feather M0 boards.
 
-It is not compatible with ARDUINO LEONARDO and not tested under ARDUINO DUE and newer boards.
-
-## TODO List
+## To-Do List
 
 Common to host and device:
 
-1) Implement other Serial settings: parity, stop bits, ...
+1) End frame delay, also known as T35
 
-2) End frame delay, also known as T35
+2) Test it with several Arduino boards: UNO, Mega, etc..
 
-3) Test it with several Arduino boards: UNO, Mega, etc..
+3) Extend it to Leonardo
 
-4) Extend it to Leonardo
-
-host:
+Host:
 
 1) Function code 1 and 2 still not implemented
 
 2) Function code 15 still not implemented
 
 3) Other codes under development
+
+## Parity, stop bits, etc
+
+The `Modbus::begin()` method, in its complete form, takes three arguments:
+
+- `ModbusPort *pPort`: this object maps from  abstract serial port semantics onto a concrete serial port.
+
+- `unsigned long baudRate`: specifies the baudrate in bits per second.
+
+- `uint16_t config`: specifies the configuration of the serial port. Normally this should be `SERIAL_8N2`(8 data bits, no parity, two stop bits), but other settings may be chosen. NB: `SoftwareSerial` doesn't yet honor these settings.
 
 ## The `ModbusSerial<>` Template Class
 
