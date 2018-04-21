@@ -155,6 +155,7 @@ class Modbus
 {
 private:
     ModbusPort *port; //!< pointer to the "port" wrapper object.
+    uint16_t u16txenDelay;
     uint8_t u8id; //!< 0=host, 1..247=device number
     uint8_t u8txenpin; //!< flow control pin: 0=USB or RS-232 mode, >0=RS-485 mode
     uint8_t u8state;
@@ -192,6 +193,7 @@ public:
     void begin(ModbusPort *pPort, unsigned long u32speed);
     void begin(ModbusPort *pPort, unsigned long u32speed, uint16_t u8config);
     void setTimeOut( uint16_t u16timeout); //!<write communication watch-dog timer
+    void setTxEnableDelay(uint16_t u16txen_us); //!<set tx enable delay in us
     uint16_t getTimeOut(); //!<get communication watch-dog timer value
     boolean getTimeOutState(); //!<get communication watch-dog timer state
     int8_t query( modbus_t telegram ); //!<only for host
@@ -296,6 +298,7 @@ void Modbus::begin(ModbusPort *pPort, unsigned long u32speed, uint16_t config)
     port->drainRead();
     lastRec = u8BufferSize = 0;
     u16InCnt = u16OutCnt = u16errCnt = 0;
+    this->u16txenDelay = 100;
 }
 
 /**
@@ -339,6 +342,21 @@ uint8_t Modbus::getID()
 void Modbus::setTimeOut( uint16_t u16timeOut)
 {
     this->u16timeOut = u16timeOut;
+}
+
+/**
+ * @brief
+ * Initialize the tx enable delay, in microseconds
+ *
+ * Called after the class has been created. The txEnable controls how long the
+ * system will wait from enabling TX before sending the first byte.
+ *
+ * @param transmit delay value (microseconds)
+ * @ingroup setup
+*/
+void Modbus::setTxEnableDelay(uint16_t u16txEnableUsec)
+{
+    this->u16txenDelay = u16txEnableUsec;
 }
 
 /**
@@ -754,6 +772,7 @@ void Modbus::sendTxBuffer()
     if (u8txenpin > 1)
     {
         digitalWrite( u8txenpin, HIGH );
+        delayMicroseconds(this->u16txenDelay);
     }
 
     // transfer buffer to serial line

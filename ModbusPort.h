@@ -29,7 +29,7 @@ public:
         ModbusPort& operator=(const ModbusPort&) = delete;
         ModbusPort(const ModbusPort&&) = delete;
         ModbusPort& operator=(const ModbusPort&&) = delete;
-        
+
         virtual void begin(unsigned long baudrate) const = 0;
         virtual void begin(unsigned long baudrate, uint16_t config) const = 0;
         virtual int available() const = 0;
@@ -42,6 +42,13 @@ public:
                         /* discard */;
                 }
         virtual void drainWrite() const = 0;
+
+        // provide this as a synonym for drainWrite, so that we
+        // have the complete Arduino::Uart interface.
+        virtual void flush() const
+                {
+                this->drainWrite();
+                }
         };
 
 template <class T> class ModbusSerial : public ModbusPort
