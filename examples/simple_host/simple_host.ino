@@ -30,6 +30,14 @@ uint8_t u8state;
 Modbus host(0, A4); // this is host and RS-232 or USB-FTDI
 ModbusSerial<decltype(Serial1)> mySerial(&Serial1);
 
+#define kPowerOn        A3
+
+static inline void powerOn(void)
+{
+        pinMode(kPowerOn, OUTPUT);
+        digitalWrite(kPowerOn, HIGH);
+}
+
 /**
  * This is a struct which contains a query to a device
  */
@@ -38,8 +46,10 @@ modbus_t telegram;
 unsigned long u32wait;
 
 void setup() {
+  powerOn();
   host.begin(&mySerial, 9600); // baud-rate at 19200
   host.setTimeOut( 2000 ); // if there is no answer in 2000 ms, roll over
+  host.setTxEnableDelay(100);
   u32wait = millis() + 1000;
   u8state = 0; 
 }

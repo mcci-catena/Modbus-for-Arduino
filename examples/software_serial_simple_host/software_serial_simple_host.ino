@@ -64,7 +64,10 @@ modbus_t telegram;
 
 unsigned long u32wait;
 
-SoftwareSerial mySerial(3, 5);//Create a SoftwareSerial object so that we can use software serial. Search "software serial" on Arduino.cc to find out more details.
+SoftwareSerial mySoftwareSerial(3, 5);//Create a SoftwareSerial object so that we can use software serial. Search "software serial" on Arduino.cc to find out more details.
+
+// Create a wrapper object with suitable semantics. 
+ModbusSerial<decltype(mySoftwareSerial)> mySerial(&mySoftwareSerial);
 
 void setup() {
   Serial.begin(9600);//use the hardware serial if you want to connect to your computer via usb cable, etc.

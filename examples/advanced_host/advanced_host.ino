@@ -23,11 +23,11 @@ uint8_t u8query; //!< pointer to message query
 /**
  *  Modbus object declaration
  *  u8id : node id = 0 for host, = 1..247 for device
- *  u8serno : serial port (use 0 for Serial)
  *  u8txenpin : 0 for RS-232 and USB-FTDI 
  *               or any pin number > 1 for RS-485
  */
-Modbus host(0,0,0); // this is host and RS-232 or USB-FTDI
+ModbusSerial<decltype(Serial1)> mySerial(&Serial1);
+Modbus host(0, 0); // this is host and RS-232 or USB-FTDI
 
 /**
  * This is a struct which contains a query to a device
@@ -51,7 +51,7 @@ void setup() {
   telegram[1].u16CoilsNo = 1; // number of elements (coils or registers) to read
   telegram[1].au16reg = au16data+4; // pointer to a memory array in the Arduino
 	
-  host.begin( 19200 ); // baud-rate at 19200
+  host.begin(&mySerial, 19200 ); // baud-rate at 19200
   host.setTimeOut( 5000 ); // if there is no answer in 5000 ms, roll over
   u32wait = millis() + 1000;
   u8state = u8query = 0; 

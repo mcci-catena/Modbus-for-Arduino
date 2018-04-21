@@ -10,7 +10,9 @@
 #include <ModbusRtu.h>
 #define ID   1
 
-Modbus device(ID, 0, 0); // this is device ID and RS-232 or USB-FTDI
+ModbusSerial<decltype(Serial1)> mySerial(&Serial1);
+
+Modbus device(ID, 0); // this is device ID and RS-232 or USB-FTDI
 boolean led;
 int8_t state = 0;
 unsigned long tempus;
@@ -25,7 +27,7 @@ void setup() {
   io_setup(); // I/O settings
 
   // start communication
-  device.begin( 19200 );
+  device.begin( &mySerial, 19200 );
   tempus = millis() + 100;
   digitalWrite(13, HIGH );
 }
@@ -49,7 +51,7 @@ void loop() {
 } 
 
 /**
- * pin maping:
+ * pin mapping:
  * 2 - digital input
  * 3 - digital input
  * 4 - digital input

@@ -20,10 +20,12 @@ uint16_t au16data[16] = {
  *  u8txenpin : 0 for RS-232 and USB-FTDI 
  *               or any pin number > 1 for RS-485
  */
-Modbus device(1,0,0); // this is device @1 and RS-232 or USB-FTDI
+ModbusSerial<decltype(Serial1)> mySerial(&Serial1);
+
+Modbus device(1, 0); // this is device @1 and RS-232 or USB-FTDI
 
 void setup() {
-  device.begin( 19200 ); // baud-rate at 19200
+  device.begin( &mySerial, 19200 ); // baud-rate at 19200
 }
 
 void loop() {
