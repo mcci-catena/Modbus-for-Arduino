@@ -1,11 +1,10 @@
 # Modbus for Aruduino
 
-This library that provides a Serial Modbus implementation for Arduino.
+This library provides a Serial Modbus implementation for Arduino.
 
 A primary goal was to enable industrial communication for the Arduino in order to link it to industrial devices such as HMIs, CNCs, PLCs, temperature regulators or speed drives.
 
-It supports software serial as well as hardware serial;
-now you can use software serial with the update from Helium6072!
+It supports software serial as well as hardware serial. The initial changes from Helium6072 are generalized so that you can use any object with Serial semantics.
 
 ### Terminology
 
@@ -24,13 +23,27 @@ examples/* | Sample sketches to implement miscellaneous settings.
 ### Examples
 
 #### examples/advanced_device
+
 Modbus device node, which links Arduino pins to the Modbus port.
-/examples/RS485_device		Modbus device adapted to the RS485 port
-/examples/simple_host		Modbus host node with a single query
-/examples/simple_device		Modbus device node with a link array
-/examples/software_serial_simple_host		Modbus host node that works via software serial
+
+#### examples/RS485_device
+
+Modbus device adapted to the RS485 port.
+
+#### examples/simple_host
+
+Modbus host node with a single query.
+
+#### examples/simple_device
+
+Modbus device node with a link array.
+
+#### examples/software_serial_simple_host
+
+Modbus host node that works via software serial.
 
 ## INSTALLATION PROCEDURE
+
 Refer to this documentation to Install this library:
 
 http://arduino.cc/en/Guide/Libraries
@@ -51,6 +64,7 @@ NB : the library will be available to use in sketches, but examples for the libr
 
 
 ## KNOWN ISSUES
+
 It is not compatible with ARDUINO LEONARDO and not tested under ARDUINO DUE and newer boards.
 
 ## TODO List
@@ -73,14 +87,36 @@ host:
 
 3) Other codes under development
 
-### New features by Helium6072 29 July 2016
+## The `ModbusSerial<>` Template Class
 
-1) "`port->flush();`" changed into "`while(port->read() >= 0);`"
+Earlier versions of this library did not compile with `SoftwareSerial`, nor with `USBSerial` ports. The error was because a polymorphic pointer is needed at the top level to the "port" -- although Serial, UART, SoftwareSerial share a common interface, there is no common abstract class in the standard Arduino library; and their methods aren't virtual.
 
-   Since `Serial.flush()` (`port->flush();` in ModbusRtu.h line 287, 337, & 827) no longer empties incoming buffer on 1.6 (Arduino.cc : flush() "Waits for the transmission of outgoing serial data to complete. Prior to Arduino 1.0, this instead removed any buffered incoming serial data.), use "while(port->read() >= 0);" instead.
+This variant of the library introduces the `ModbusPort` class, which has all the proper abstract semantics, and the `ModbusSerial<T>` template class, which maps the abstract semantics of `ModbusPort` onto the concrete semantics of `T` (whatever `T` happens to be; provided that `T` conforms to the Serial API).
 
-2) software serial compatible
+Declaring a Modbus instance takes two steps (which can be done in any order).
 
-   New constructor `Modbus::Modbus(uint8_t u8id)` and method `void Modbus::begin(SoftwareSerial *sPort, long u32speed)` that makes using software serial possible.
+1. Declare a `Modbus` instance that represents the host or device:
 
-   Check out example "software_serial_simple_host" and learn more!
+   ```c++
+   Modbus host(0, kTxPin);
+   ```
+
+   This declares a variable named `host`, which represents a Modbus controller. `kTxPin`, if non-zero, specifies the pin to be used to enable/disable TX.
+
+2. Declare an object derived from `ModbusPort` to serve as the interface to the serial port. The easy way to do this is using the `ModbusSerial<>` template type.
+
+   ```c++
+   // declare modbusSerial as a ModbusSerial<> object
+   // and map it onto Serial1:
+   ModbusSerial<decltype(Serial1)> modbusSerial(&Serial1);
+   ```
+
+   Of course, if you know that the type of `Serial` is `UART`, you can also write:
+
+   ```c++
+   // declare modbusSerial as a ModbusSerial<> object
+   // and map it onto Serial1:
+   ModbusSerial<UART> modbusSerial(&Serial1);
+   ```
+
+   We tend to prefer the former form, as it makes the examples more portable.
