@@ -585,7 +585,7 @@ int8_t Modbus::poll()
         u32time = millis() + T35;
         return 0;
     }
-    if (millis() < u32time) return 0;
+    if ((int32_t)(millis() - u32time) < 0) return 0;
 
     // transfer Serial buffer frame to auBuffer
     lastRec = 0;
@@ -672,7 +672,7 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
         u32time = millis() + T35;
         return 0;
     }
-    if (millis() < u32time) return 0;
+    if ((int32_t)(millis() - u32time) < 0) return 0;
 
     lastRec = 0;
     uint8_t u8Len;
@@ -708,7 +708,7 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
         return -1;
     }
 
-    u32timeOut = millis() + long(u16timeOut);
+    u32timeOut = millis() + uint32_t(u16timeOut);
     lastError = ERR_SUCCESS;
 
     // process message
