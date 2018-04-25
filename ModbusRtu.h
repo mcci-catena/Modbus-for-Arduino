@@ -122,8 +122,7 @@ enum ERR_LIST : int16_t
     ERR_BUFF_OVERFLOW             = -3,
     ERR_BAD_CRC                   = -4,
     ERR_EXCEPTION                 = -5,
-    // TODO(tmm@mcci.com) rename NO_REPLY -> ERR_NO_REPLY
-    NO_REPLY			  = -6,
+    ERR_NO_REPLY                  = -6,
     ERR_RUNT_PACKET		  = -7,
 };
 
@@ -572,7 +571,7 @@ int8_t Modbus::poll()
     if (this->getTimeOutState())
     {
         u8state = COM_IDLE;
-        lastError = NO_REPLY;
+        lastError = ERR_NO_REPLY;
         u16errCnt++;
         return -1;
     }
