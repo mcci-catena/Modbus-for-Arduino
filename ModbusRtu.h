@@ -770,8 +770,6 @@ uint8_t Modbus::getRxBuffer(ERR_LIST &errcode)
 {
     boolean bBuffOverflow = false;
 
-    if (u8txenpin > 1) digitalWrite( u8txenpin, LOW );
-
     u8BufferSize = 0;
     while ( port->available() )
         {
