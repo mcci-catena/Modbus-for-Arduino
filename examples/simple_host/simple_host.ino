@@ -57,7 +57,7 @@ void setup() {
 void loop() {
   switch( u8state ) {
   case 0: 
-    if (millis() > u32wait) u8state++; // wait state
+    if (long(millis() - u32wait) > 0) u8state++; // wait state
     break;
   case 1: 
     telegram.u8id = 1; // device address
@@ -66,6 +66,7 @@ void loop() {
     telegram.u16CoilsNo = 4; // number of elements (coils or registers) to read
     telegram.au16reg = au16data; // pointer to a memory array in the Arduino
 
+    host.setLastError(ERR_SUCCESS);
     host.query( telegram ); // send query (only once)
     u8state++;
     break;
@@ -73,15 +74,22 @@ void loop() {
     host.poll(); // check incoming messages
     if (host.getState() == COM_IDLE) {
       u8state = 0;
-      Serial.print("Registers: ");
-      for (int i=0; i < 4; ++i)
-        {
-        Serial.print(" ");
-        Serial.print(au16data[i], 16);
-        }
+      ERR_LIST lastError = host.getLastError();
+      if (host.getLastError() != ERR_SUCCESS) {
+	Serial.print("Error ");
+	Serial.print(int(lastError));
+      } else {
+        Serial.print(millis());
+        Serial.print(": Registers: ");
+        for (int i=0; i < 4; ++i)
+          {
+          Serial.print(" ");
+          Serial.print(au16data[i], 16);
+          }
+      }
       Serial.println("");
 
-      u32wait = millis() + 100; 
+      u32wait = millis() + 100;
     }
     break;
   }
