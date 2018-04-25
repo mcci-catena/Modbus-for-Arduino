@@ -74,13 +74,15 @@ enum
  */
 enum MESSAGE
 {
-    ID                             = 0, //!< ID field
-    FUNC, //!< Function code position
-    ADD_HI, //!< Address high byte
-    ADD_LO, //!< Address low byte
-    NB_HI, //!< Number of coils or registers high byte
-    NB_LO, //!< Number of coils or registers low byte
-    BYTE_CNT  //!< byte counter
+    ID = 0, //!< Index of ID field
+    FUNC, //!< Index of Function code
+    ADD_HI, //!< Index of Address high byte
+    ADD_LO, //!< Index of Address low byte
+    NB_HI, //!< Index of Number of coils or registers high byte
+    NB_LO, //!< Index of Number of coils or registers low byte
+    BYTE_CNT,  //!< Index of byte counter
+
+    EXCEPTION = FUNC + 1, //!< Index in exception response of exception code.
 };
 
 /**
@@ -112,22 +114,39 @@ enum COM_STATES
 
 };
 
-enum ERR_LIST
+enum ERR_LIST : int16_t
 {
+    ERR_SUCCESS                   = 0,
     ERR_NOT_HOST                  = -1,
     ERR_POLLING                   = -2,
     ERR_BUFF_OVERFLOW             = -3,
     ERR_BAD_CRC                   = -4,
-    ERR_EXCEPTION                 = -5
+    ERR_EXCEPTION                 = -5,
+    // TODO(tmm@mcci.com) rename NO_REPLY -> ERR_NO_REPLY
+    NO_REPLY			  = -6,
+    ERR_RUNT_PACKET		  = -7,
 };
 
+// TODO(tmm@mcci.com) use values from MB_EXCEPTION instead
 enum
 {
-    NO_REPLY = 255,
     EXC_FUNC_CODE = 1,
     EXC_ADDR_RANGE = 2,
     EXC_REGS_QUANT = 3,
-    EXC_EXECUTE = 4
+    EXC_EXECUTE = 4,
+};
+
+enum MB_EXCEPTION: uint8_t
+{
+    MB_EXC_ILLEGAL_FUNCTION = 1,
+    MB_EXC_ILLEGAL_DATA_ADDRESS = 2,
+    MB_EXC_ILLEGAL_DATA_VALUE = 3,
+    MB_EXC_SERVER_DEVICE_FAILURE = 4,
+    MB_EXC_ACKNOWLEDGE = 5,
+    MB_EXC_SERVER_DEVICE_BUSY = 6,
+    MB_MEMORY_PARITY_ERROR = 8,
+    MB_GATEWAY_PATH_UNAVAILABLE = 0x0A,
+    MB_GATEWAY_TARGET_DEVICE_FAILED_TO_RESPOND = 0x0B,
 };
 
 const unsigned char fctsupported[] =
@@ -159,7 +178,6 @@ private:
     uint8_t u8id; //!< 0=host, 1..247=device number
     uint8_t u8txenpin; //!< flow control pin: 0=USB or RS-232 mode, >0=RS-485 mode
     uint8_t u8state;
-    uint8_t u8lastError;
     uint8_t au8Buffer[MAX_BUFFER];
     uint8_t u8BufferSize;
     uint8_t lastRec;
@@ -167,15 +185,16 @@ private:
     uint16_t u16InCnt, u16OutCnt, u16errCnt;
     uint16_t u16timeOut;
     uint32_t u32time, u32timeOut;
+    ERR_LIST lastError;
     uint8_t u8regsize;
 
     void init(uint8_t u8id, uint8_t u8txenpin);
     void init(uint8_t u8id);
     void sendTxBuffer();
-    int8_t getRxBuffer();
+    uint8_t getRxBuffer(ERR_LIST &errcode);
     uint16_t calcCRC(uint8_t u8length);
-    uint8_t validateAnswer();
-    uint8_t validateRequest();
+    ERR_LIST validateAnswer();
+    ERR_LIST validateRequest();
     void get_FC1();
     void get_FC3();
     int8_t process_FC1( uint16_t *regs, uint8_t u8size );
@@ -204,7 +223,8 @@ public:
     uint16_t getErrCnt(); //!<error counter
     uint8_t getID(); //!<get device ID between 1 and 247
     uint8_t getState();
-    uint8_t getLastError(); //!<get last error message
+    ERR_LIST getLastError(); //!<get last error value.
+    void setLastError(ERR_LIST errcode); //!<set last error value.
     void setID( uint8_t u8id ); //!<write new ID for the device
     void end(); //!<finish any communication and release serial communication port
 };
@@ -425,15 +445,17 @@ uint8_t Modbus::getState()
 /**
  * Get the last error in the protocol processor
  *
- * @returnreturn   NO_REPLY = 255      Time-out
- * @return   EXC_FUNC_CODE = 1   Function code not available
- * @return   EXC_ADDR_RANGE = 2  Address beyond available space for Modbus registers
- * @return   EXC_REGS_QUANT = 3  Coils or registers number beyond the available space
+ * @return   last reported error, if non zero. Negative value means a protocol error, positive is a Modbus exception code
  * @ingroup buffer
  */
-uint8_t Modbus::getLastError()
+ERR_LIST Modbus::getLastError()
 {
-    return u8lastError;
+    return this->lastError;
+}
+
+void Modbus::setLastError(ERR_LIST errorValue)
+{
+	this->lastError = errorValue;
 }
 
 /**
@@ -538,7 +560,7 @@ int8_t Modbus::query( modbus_t telegram )
  * as defined in its modbus_t query telegram.
  *
  * @params	nothing
- * @return errors counter
+ * @return 0 if no progress, -1 if error, +1 if operation completed.
  * @ingroup loop
  */
 int8_t Modbus::poll()
@@ -550,9 +572,9 @@ int8_t Modbus::poll()
     if (this->getTimeOutState())
     {
         u8state = COM_IDLE;
-        u8lastError = NO_REPLY;
+        lastError = NO_REPLY;
         u16errCnt++;
-        return 0;
+        return -1;
     }
 
     if (current == 0) return 0;
@@ -568,20 +590,25 @@ int8_t Modbus::poll()
 
     // transfer Serial buffer frame to auBuffer
     lastRec = 0;
-    int8_t i8state = getRxBuffer();
-    if (i8state < 7)
+    uint8_t u8Len;
+    ERR_LIST errcode;
+
+    u8Len = getRxBuffer(errcode);
+    if (errcode != 0)
     {
+	this->lastError = errcode;
         u8state = COM_IDLE;
         u16errCnt++;
-        return i8state;
+        return errcode;
     }
 
     // validate message: id, CRC, FCT, exception
-    uint8_t u8exception = validateAnswer();
-    if (u8exception != 0)
+    errcode = validateAnswer();
+    if (errcode != 0)
     {
+	this->lastError = errcode;
         u8state = COM_IDLE;
-        return u8exception;
+        return -1;
     }
 
     // process answer
@@ -607,7 +634,7 @@ int8_t Modbus::poll()
         break;
     }
     u8state = COM_IDLE;
-    return u8BufferSize;
+    return 1;
 }
 
 /**
@@ -620,7 +647,7 @@ int8_t Modbus::poll()
  *
  * @param *regs  register table for communication exchange
  * @param u8size  size of the register table
- * @return 0 if no query, 1..4 if communication error, >4 if correct query processed
+ * @return 0 if no query, -1 if any error, 1 if correct query processed
  * @ingroup loop
  */
 int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
@@ -637,6 +664,9 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
     if (current == 0) return 0;
 
     // check T35 after frame end or still no frame end
+    // We allow the ring buffer to accumulate the data; this
+    // limts the maximum message size to the size of the ring
+    // buffer.
     if (current != lastRec)
     {
         lastRec = current;
@@ -646,28 +676,41 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
     if (millis() < u32time) return 0;
 
     lastRec = 0;
-    int8_t i8state = getRxBuffer();
-    u8lastError = i8state;
-    if (i8state < 7) return i8state;
+    uint8_t u8Len;
+    ERR_LIST errcode;
 
-    // check device id
-    if (au8Buffer[ ID ] != u8id) return 0;
+    u8Len = getRxBuffer(errcode);
+
+    if (errcode != 0)
+	{
+	lastError = errcode;
+	return -1;
+	}
+
+    // check device id -- since port->available() was non-zero, we can assume 
+    // that at least one byte was received.  We check the address to save
+    // CRC calculations, in case the message is not for us.
+    if (au8Buffer[ ID ] != u8id)
+    {
+        // TODO(tmm@mcci.com) increment a statistic
+        return 0;
+    }
 
     // validate message: CRC, FCT, address and size
-    uint8_t u8exception = validateRequest();
-    if (u8exception > 0)
+    errcode = validateRequest();
+    if (errcode != 0)
     {
-        if (u8exception != NO_REPLY)
+        if (errcode > 0)
         {
-            buildException( u8exception );
+            buildException( errcode );
             sendTxBuffer();
         }
-        u8lastError = u8exception;
-        return u8exception;
+        lastError = errcode;
+        return -1;
     }
 
     u32timeOut = millis() + long(u16timeOut);
-    u8lastError = 0;
+    lastError = ERR_SUCCESS;
 
     // process message
     switch( au8Buffer[ FUNC ] )
@@ -695,7 +738,7 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
     default:
         break;
     }
-    return i8state;
+    return 1;
 }
 
 /* _____PRIVATE FUNCTIONS_____________________________________________________ */
@@ -718,10 +761,13 @@ void Modbus::init(uint8_t u8id)
  * @brief
  * This method moves Serial buffer data to the Modbus au8Buffer.
  *
+ * The ring buffer is drained, and is assumed to represent the
+ * entire message.
+ *
  * @return buffer size if OK, ERR_BUFF_OVERFLOW if u8BufferSize >= MAX_BUFFER
  * @ingroup buffer
  */
-int8_t Modbus::getRxBuffer()
+uint8_t Modbus::getRxBuffer(ERR_LIST &errcode)
 {
     boolean bBuffOverflow = false;
 
@@ -730,17 +776,23 @@ int8_t Modbus::getRxBuffer()
     u8BufferSize = 0;
     while ( port->available() )
         {
-            au8Buffer[ u8BufferSize ] = port->read();
-            u8BufferSize ++;
-
-            if (u8BufferSize >= MAX_BUFFER) bBuffOverflow = true;
+	if (u8BufferSize >= MAX_BUFFER)
+		bBuffOverflow = true;
+	else
+		{
+		au8Buffer[ u8BufferSize++ ] = port->read();
+		}
         }
     u16InCnt++;
 
     if (bBuffOverflow)
     {
         u16errCnt++;
-        return ERR_BUFF_OVERFLOW;
+	errcode = ERR_BUFF_OVERFLOW;
+    }
+    else
+    {
+	errcode = ERR_SUCCESS;
     }
     return u8BufferSize;
 }
@@ -832,10 +884,10 @@ uint16_t Modbus::calcCRC(uint8_t u8length)
  * @brief
  * This method validates device incoming messages
  *
- * @return 0 if OK, EXCEPTION if anything fails
+ * @return 0 if OK, non-zero error code if anything fails
  * @ingroup buffer
  */
-uint8_t Modbus::validateRequest()
+ERR_LIST Modbus::validateRequest()
 {
     // check message crc vs calculated crc
     uint16_t u16MsgCRC =
@@ -844,7 +896,7 @@ uint8_t Modbus::validateRequest()
     if ( calcCRC( u8BufferSize-2 ) != u16MsgCRC )
     {
         u16errCnt ++;
-        return NO_REPLY;
+        return ERR_BAD_CRC;
     }
 
     // check fct code
@@ -860,7 +912,7 @@ uint8_t Modbus::validateRequest()
     if (!isSupported)
     {
         u16errCnt ++;
-        return EXC_FUNC_CODE;
+        return ERR_LIST(EXC_FUNC_CODE);
     }
 
     // check start address & nb range
@@ -874,17 +926,17 @@ uint8_t Modbus::validateRequest()
         u16regs = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ]) / 16;
         u16regs += word( au8Buffer[ NB_HI ], au8Buffer[ NB_LO ]) /16;
         u8regs = (uint8_t) u16regs;
-        if (u8regs > u8regsize) return EXC_ADDR_RANGE;
+        if (u8regs > u8regsize) return ERR_LIST(EXC_ADDR_RANGE);
         break;
     case MB_FC_WRITE_COIL:
         u16regs = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ]) / 16;
         u8regs = (uint8_t) u16regs;
-        if (u8regs > u8regsize) return EXC_ADDR_RANGE;
+        if (u8regs > u8regsize) return ERR_LIST(EXC_ADDR_RANGE);
         break;
     case MB_FC_WRITE_REGISTER :
         u16regs = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ]);
         u8regs = (uint8_t) u16regs;
-        if (u8regs > u8regsize) return EXC_ADDR_RANGE;
+        if (u8regs > u8regsize) return ERR_LIST(EXC_ADDR_RANGE);
         break;
     case MB_FC_READ_REGISTERS :
     case MB_FC_READ_INPUT_REGISTER :
@@ -892,10 +944,10 @@ uint8_t Modbus::validateRequest()
         u16regs = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ]);
         u16regs += word( au8Buffer[ NB_HI ], au8Buffer[ NB_LO ]);
         u8regs = (uint8_t) u16regs;
-        if (u8regs > u8regsize) return EXC_ADDR_RANGE;
+        if (u8regs > u8regsize) return ERR_LIST(EXC_ADDR_RANGE);
         break;
     }
-    return 0; // OK, no exception code thrown
+    return ERR_SUCCESS; // OK, no exception code thrown
 }
 
 /**
@@ -905,8 +957,13 @@ uint8_t Modbus::validateRequest()
  * @return 0 if OK, EXCEPTION if anything fails
  * @ingroup buffer
  */
-uint8_t Modbus::validateAnswer()
+ERR_LIST Modbus::validateAnswer()
 {
+    if (u8BufferSize < 4)
+    {
+	    u16errCnt ++;
+	    return ERR_RUNT_PACKET;
+    }
     // check message crc vs calculated crc
     uint16_t u16MsgCRC =
         ((au8Buffer[u8BufferSize - 2] << 8)
@@ -914,14 +971,14 @@ uint8_t Modbus::validateAnswer()
     if ( calcCRC( u8BufferSize-2 ) != u16MsgCRC )
     {
         u16errCnt ++;
-        return NO_REPLY;
+        return ERR_BAD_CRC;
     }
 
     // check exception
     if ((au8Buffer[ FUNC ] & 0x80) != 0)
     {
         u16errCnt ++;
-        return ERR_EXCEPTION;
+        return ERR_LIST(au8Buffer[EXCEPTION]);
     }
 
     // check fct code
@@ -937,10 +994,10 @@ uint8_t Modbus::validateAnswer()
     if (!isSupported)
     {
         u16errCnt ++;
-        return EXC_FUNC_CODE;
+        return ERR_LIST(EXC_FUNC_CODE);
     }
 
-    return 0; // OK, no exception code thrown
+    return ERR_SUCCESS; // OK, no exception code thrown
 }
 
 /**
@@ -1191,8 +1248,8 @@ int8_t Modbus::process_FC15( uint16_t *regs, uint8_t u8size )
         }
     }
 
-    // send outcoming message
-    // it's just a copy of the incomping frame until 6th byte
+    // send outgoing message
+    // it's just a copy of the incomping message until 6th byte
     u8BufferSize         = 6;
     u8CopyBufferSize = u8BufferSize +2;
     sendTxBuffer();
