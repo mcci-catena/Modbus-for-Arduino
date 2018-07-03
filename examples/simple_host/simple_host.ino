@@ -19,6 +19,8 @@
 // data array for modbus network sharing
 uint16_t au16data[16];
 uint8_t u8state;
+uint8_t u8addr;
+uint8_t u8lastaddr;
 
 /**
  *  Modbus object declaration
@@ -52,6 +54,8 @@ void setup() {
   host.setTxEnableDelay(100);
   u32wait = millis() + 1000;
   u8state = 0; 
+  u8addr = 1;
+  u8lastaddr = 2;
 }
 
 void loop() {
@@ -60,7 +64,7 @@ void loop() {
     if (long(millis() - u32wait) > 0) u8state++; // wait state
     break;
   case 1: 
-    telegram.u8id = 1; // device address
+    telegram.u8id = u8addr; // device address
     telegram.u8fct = 3; // function code (this one is registers read)
     telegram.u16RegAdd = 1700; // start address in device
     telegram.u16CoilsNo = 4; // number of elements (coils or registers) to read
@@ -75,11 +79,14 @@ void loop() {
     if (host.getState() == COM_IDLE) {
       u8state = 0;
       ERR_LIST lastError = host.getLastError();
+      Serial.print(millis());
+      Serial.print(": addr=");
+      Serial.print(u8addr, 16);
+
       if (host.getLastError() != ERR_SUCCESS) {
-	Serial.print("Error ");
+	Serial.print(": Error ");
 	Serial.print(int(lastError));
       } else {
-        Serial.print(millis());
         Serial.print(": Registers: ");
         for (int i=0; i < 4; ++i)
           {
@@ -88,6 +95,12 @@ void loop() {
           }
       }
       Serial.println("");
+
+      // move to next
+      if (u8addr == u8lastaddr)
+        u8addr = 1;
+      else
+        ++u8addr;
 
       u32wait = millis() + 100;
     }
