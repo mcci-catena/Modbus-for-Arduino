@@ -161,7 +161,7 @@ const unsigned char fctsupported[] =
 };
 
 #define T35  5
-#define  MAX_BUFFER  64	//!< maximum size for the communication buffer in bytes
+#define  MAX_BUFFER  256	//!< maximum size for the communication buffer in bytes
 
 /**
  * @class Modbus
@@ -686,7 +686,7 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
 	return -1;
 	}
 
-    // check device id -- since port->available() was non-zero, we can assume 
+    // check device id -- since port->available() was non-zero, we can assume
     // that at least one byte was received.  We check the address to save
     // CRC calculations, in case the message is not for us.
     if (au8Buffer[ ID ] != u8id)
