@@ -1,8 +1,8 @@
 /**
- * @file 	ModbusRtu.h
+ * @file        ModbusRtu.h
  * @version     1.21
  * @date        2016.02.21
- * @author 	Samuel Marco i Armengol
+ * @author      Samuel Marco i Armengol
  * @contact     sammarcoarmengol@gmail.com
  * @contribution Helium6072
  *
@@ -98,15 +98,15 @@ enum MESSAGE
  */
 enum MB_FC
 {
-    MB_FC_NONE                     = 0,   /*!< null operator */
-    MB_FC_READ_COILS               = 1,	/*!< FCT=1 -> read coils or digital outputs */
-    MB_FC_READ_DISCRETE_INPUT      = 2,	/*!< FCT=2 -> read digital inputs */
-    MB_FC_READ_REGISTERS           = 3,	/*!< FCT=3 -> read registers or analog outputs */
-    MB_FC_READ_INPUT_REGISTER      = 4,	/*!< FCT=4 -> read analog inputs */
-    MB_FC_WRITE_COIL               = 5,	/*!< FCT=5 -> write single coil or output */
-    MB_FC_WRITE_REGISTER           = 6,	/*!< FCT=6 -> write single register */
-    MB_FC_WRITE_MULTIPLE_COILS     = 15,	/*!< FCT=15 -> write multiple coils or outputs */
-    MB_FC_WRITE_MULTIPLE_REGISTERS = 16	/*!< FCT=16 -> write multiple registers */
+    MB_FC_NONE                     = 0,     /*!< null operator */
+    MB_FC_READ_COILS               = 1,     /*!< FCT=1 -> read coils or digital outputs */
+    MB_FC_READ_DISCRETE_INPUT      = 2,     /*!< FCT=2 -> read digital inputs */
+    MB_FC_READ_REGISTERS           = 3,     /*!< FCT=3 -> read registers or analog outputs */
+    MB_FC_READ_INPUT_REGISTER      = 4,     /*!< FCT=4 -> read analog inputs */
+    MB_FC_WRITE_COIL               = 5,     /*!< FCT=5 -> write single coil or output */
+    MB_FC_WRITE_REGISTER           = 6,     /*!< FCT=6 -> write single register */
+    MB_FC_WRITE_MULTIPLE_COILS     = 15,    /*!< FCT=15 -> write multiple coils or outputs */
+    MB_FC_WRITE_MULTIPLE_REGISTERS = 16     /*!< FCT=16 -> write multiple registers */
 };
 
 enum COM_STATES
@@ -164,7 +164,7 @@ const unsigned char fctsupported[] =
 };
 
 #define T35  5
-#define  MAX_BUFFER  256	//!< maximum size for the communication buffer in bytes
+#define  MAX_BUFFER  256    //!< maximum size for the communication buffer in bytes
 
 /**
  * @class Modbus
