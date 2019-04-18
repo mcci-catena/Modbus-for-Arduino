@@ -113,7 +113,6 @@ enum COM_STATES
 {
     COM_IDLE                     = 0,
     COM_WAITING                  = 1
-
 };
 
 enum ERR_LIST : int16_t
@@ -230,4 +229,3 @@ public:
     void setID( uint8_t u8id ); //!<write new ID for the device
     void end(); //!<finish any communication and release serial communication port
 };
-
