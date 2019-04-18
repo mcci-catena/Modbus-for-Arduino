@@ -207,9 +207,39 @@ private:
     void buildException( uint8_t u8exception ); // build exception message
 
 public:
-    Modbus();
-    Modbus(uint8_t u8id);
-    Modbus(uint8_t u8id, uint8_t u8txenpin);
+    /**
+     * @brief
+     * Default Constructor: make a host, no rx/tx control
+     *
+     * @ingroup setup
+     */
+    Modbus() : u8id(0), u8txenpin(0), u16timeOut(1000) {};
+
+    /**
+     * @brief
+     * Full constructor for a host/device through USB/RS232C, no rx/tx control
+     *
+     * @param u8id   node address 0=host, 1..247=device
+     * @ingroup setup
+     * @overload Modbus::Modbus(uint8_t u8id)
+     * @overload Modbus::Modbus()
+     */
+    Modbus(uint8_t u8id) : u8id(u8id), u8txenpin(0), u16timeOut(1000) {};
+
+    /**
+     * @brief
+     * Full constructor for a host/device through USB/RS232C/RS485
+     * It needs a pin for flow control only for RS485 mode
+     *
+     * @param u8id   node address 0=host, 1..247=device
+     * @param u8txenpin pin for txen RS-485 (=0 means USB/RS232C mode)
+     * @ingroup setup
+     * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8txenpin)
+     * @overload Modbus::Modbus(uint8_t u8id)
+     * @overload Modbus::Modbus()
+     */
+    Modbus(uint8_t u8id, uint8_t u8txenpin) : u8id(u8id), u8txenpin(u8txenpin), u16timeOut(1000) {};
+
     void begin(ModbusPort *pPort, unsigned long u32speed);
     void begin(ModbusPort *pPort, unsigned long u32speed, uint16_t u8config);
     void setTimeOut( uint16_t u16timeout); //!<write communication watch-dog timer
