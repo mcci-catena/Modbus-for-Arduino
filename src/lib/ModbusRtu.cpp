@@ -1,8 +1,8 @@
 /**
- * @file 	ModbusRtu.cpp
+ * @file        ModbusRtu.cpp
  * @version     1.21
  * @date        2016.02.21
- * @author 	Samuel Marco i Armengol
+ * @author      Samuel Marco i Armengol
  * @contact     sammarcoarmengol@gmail.com
  * @contribution Helium6072
  *
@@ -135,7 +135,7 @@ void Modbus::begin(ModbusPort *pPort, unsigned long u32speed, uint16_t config)
  * @brief
  * Method to write a new device ID address
  *
- * @param 	u8id	new device address between 1 and 247
+ * @param   u8id    new device address between 1 and 247
  * @ingroup setup
  */
 void Modbus::setID( uint8_t u8id)
@@ -150,7 +150,7 @@ void Modbus::setID( uint8_t u8id)
  * @brief
  * Method to read current device ID address
  *
- * @return u8id	current device address between 1 and 247
+ * @return u8id current device address between 1 and 247
  * @ingroup setup
  */
 uint8_t Modbus::getID()
@@ -265,7 +265,7 @@ ERR_LIST Modbus::getLastError()
 
 void Modbus::setLastError(ERR_LIST errorValue)
 {
-	this->lastError = errorValue;
+    this->lastError = errorValue;
 }
 
 /**
@@ -280,13 +280,13 @@ void Modbus::setLastError(ERR_LIST errorValue)
  * @ingroup loop
  * @todo finish function 15
  */
-int8_t Modbus::query( modbus_t telegram )
+ERR_LIST Modbus::query( modbus_t telegram )
 {
     uint8_t u8regsno, u8bytesno;
-    if (u8id!=0) return -2;
-    if (u8state != COM_IDLE) return -1;
+    if (u8id!=0) return ERR_NOT_HOST;
+    if (u8state != COM_IDLE) return ERR_POLLING;
 
-    if ((telegram.u8id==0) || (telegram.u8id>247)) return -3;
+    if ((telegram.u8id==0) || (telegram.u8id>247)) return ERR_ILLEGAL_DEVICE_ADDRESS;
 
     au16regs = telegram.au16reg;
 
@@ -356,7 +356,7 @@ int8_t Modbus::query( modbus_t telegram )
 
     sendTxBuffer();
     u8state = COM_WAITING;
-    return 0;
+    return ERR_SUCCESS;
 }
 
 /**
@@ -369,11 +369,11 @@ int8_t Modbus::query( modbus_t telegram )
  * Any incoming data would be redirected to au16regs pointer,
  * as defined in its modbus_t query telegram.
  *
- * @params	nothing
- * @return 0 if no progress, -1 if error, +1 if operation completed.
+ * @params  nothing
+ * @return 0 if no progress, ERR_LIST code < 0 if error, +1 if operation completed.
  * @ingroup loop
  */
-int8_t Modbus::poll()
+int16_t Modbus::poll()
 {
     // check if there is any incoming frame
     int current;
@@ -384,7 +384,7 @@ int8_t Modbus::poll()
         u8state = COM_IDLE;
         lastError = ERR_NO_REPLY;
         u16errCnt++;
-        return -1;
+        return ERR_NO_REPLY;
     }
 
     if (current == 0) return 0;
@@ -406,7 +406,7 @@ int8_t Modbus::poll()
     u8Len = getRxBuffer(errcode);
     if (errcode != 0)
     {
-	this->lastError = errcode;
+        this->lastError = errcode;
         u8state = COM_IDLE;
         u16errCnt++;
         return errcode;
@@ -416,9 +416,9 @@ int8_t Modbus::poll()
     errcode = validateAnswer();
     if (errcode != 0)
     {
-	this->lastError = errcode;
+        this->lastError = errcode;
         u8state = COM_IDLE;
-        return -1;
+        return errcode;
     }
 
     // process answer
@@ -492,10 +492,10 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
     u8Len = getRxBuffer(errcode);
 
     if (errcode != 0)
-	{
-	lastError = errcode;
-	return -1;
-	}
+    {
+        lastError = errcode;
+        return -1;
+    }
 
     // check device id -- since port->available() was non-zero, we can assume
     // that at least one byte was received.  We check the address to save
@@ -584,23 +584,23 @@ uint8_t Modbus::getRxBuffer(ERR_LIST &errcode)
     u8BufferSize = 0;
     while ( port->available() )
         {
-	if (u8BufferSize >= MAX_BUFFER)
-		bBuffOverflow = true;
-	else
-		{
-		au8Buffer[ u8BufferSize++ ] = port->read();
-		}
+        if (u8BufferSize >= MAX_BUFFER)
+            bBuffOverflow = true;
+        else
+            {
+            au8Buffer[ u8BufferSize++ ] = port->read();
+            }
         }
     u16InCnt++;
 
     if (bBuffOverflow)
     {
         u16errCnt++;
-	errcode = ERR_BUFF_OVERFLOW;
+        errcode = ERR_BUFF_OVERFLOW;
     }
     else
     {
-	errcode = ERR_SUCCESS;
+        errcode = ERR_SUCCESS;
     }
     return u8BufferSize;
 }
@@ -769,8 +769,8 @@ ERR_LIST Modbus::validateAnswer()
 {
     if (u8BufferSize < 4)
     {
-	    u16errCnt ++;
-	    return ERR_RUNT_PACKET;
+        u16errCnt ++;
+        return ERR_RUNT_PACKET;
     }
     // check message crc vs calculated crc
     uint16_t u16MsgCRC =
