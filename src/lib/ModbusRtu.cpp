@@ -1,10 +1,9 @@
 /**
  * @file        ModbusRtu.cpp
- * @version     1.21
- * @date        2016.02.21
+ * @version     0.3.0
  * @author      Samuel Marco i Armengol
  * @contact     sammarcoarmengol@gmail.com
- * @contribution Helium6072
+ * @contribution Helium6072, tmm@mcci.com
  *
  * @description
  *  Arduino library for communicating with Modbus devices

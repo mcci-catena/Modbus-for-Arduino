@@ -1,10 +1,9 @@
 /**
  * @file        ModbusRtu.h
- * @version     1.21
- * @date        2016.02.21
+ * @version     0.3.0
  * @author      Samuel Marco i Armengol
  * @contact     sammarcoarmengol@gmail.com
- * @contribution Helium6072
+ * @contribution Helium6072, tmm@mcci.com
  *
  * @description
  *  Arduino library for communicating with Modbus devices
@@ -43,6 +42,31 @@
 #include "Arduino.h"
 #include "Print.h"
 #include "ModbusPort.h"
+
+// Versioning information.
+
+/// @brief generate a 32-bit version
+#define MCCI_MODBUS_RTU_ARDUINO_VERSION_CALC(major, minor, patch, local)	\
+    (((major) << 24u) | ((minor) << 16u) | ((patch) << 8u) | (local))
+
+/// @brief the version of this library - increment on every addition/deletion
+#define	MCCI_MODBUS_RTU_ARDUINO_VERSION	MCCI_MODBUS_RTU_ARDUINO_VERSION_CALC(0, 3, 0, 0)        /* v0.3.0.0 */
+
+/// @brief get major code
+#define	MCCI_MODBUS_RTU_ARDUINO_VERSION_GET_MAJOR(v)	\
+    (((v) >> 24u) & 0xFFu)
+
+/// @brief get minor code
+#define	MCCI_MODBUS_RTU_ARDUINO_VERSION_GET_MINOR(v)	\
+    (((v) >> 16u) & 0xFFu)
+
+/// @brief get patch number (from semantic version)
+#define	MCCI_MODBUS_RTU_ARDUINO_VERSION_GET_PATCH(v)	\
+    (((v) >> 8u) & 0xFFu)
+
+/// @brief get local version -- used in between official releases.
+#define	MCCI_MODBUS_RTU_ARDUINO_VERSION_GET_LOCAL(v)	\
+    ((v) & 0xFFu)
 
 /**
  * @struct modbus_t
