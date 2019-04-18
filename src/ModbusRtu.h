@@ -125,7 +125,8 @@ enum ERR_LIST : int16_t
     ERR_BAD_CRC                   = -4,
     ERR_EXCEPTION                 = -5,
     ERR_NO_REPLY                  = -6,
-    ERR_RUNT_PACKET		  = -7,
+    ERR_RUNT_PACKET               = -7,
+    ERR_ILLEGAL_DEVICE_ADDRESS    = -8,
 };
 
 // TODO(tmm@mcci.com) use values from MB_EXCEPTION instead
@@ -216,8 +217,8 @@ public:
     void setTxEnableDelay(uint16_t u16txen_us); //!<set tx enable delay in us
     uint16_t getTimeOut(); //!<get communication watch-dog timer value
     boolean getTimeOutState(); //!<get communication watch-dog timer state
-    int8_t query( modbus_t telegram ); //!<only for host
-    int8_t poll(); //!<cyclic poll for host
+    ERR_LIST query( modbus_t telegram ); //!<only for host
+    int16_t poll(); //!<cyclic poll for host
     int8_t poll( uint16_t *regs, uint8_t u8size ); //!<cyclic poll for device
     uint16_t getInCnt(); //!<number of incoming messages
     uint16_t getOutCnt(); //!<number of outcoming messages
