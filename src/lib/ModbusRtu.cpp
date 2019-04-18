@@ -43,48 +43,6 @@
 
 /**
  * @brief
- * Default Constructor: make a host, no rx/tx control
- *
- * @ingroup setup
- */
-Modbus::Modbus()
-{
-    init(0, 0);
-}
-
-/**
- * @brief
- * Full constructor for a host/device through USB/RS232C, no rx/tx control
- *
- * @param u8id   node address 0=host, 1..247=device
- * @ingroup setup
- * @overload Modbus::Modbus(uint8_t u8id)
- * @overload Modbus::Modbus()
- */
-Modbus::Modbus(uint8_t u8id)
-{
-    init(u8id, 0);
-}
-
-/**
- * @brief
- * Full constructor for a host/device through USB/RS232C/RS485
- * It needs a pin for flow control only for RS485 mode
- *
- * @param u8id   node address 0=host, 1..247=device
- * @param u8txenpin pin for txen RS-485 (=0 means USB/RS232C mode)
- * @ingroup setup
- * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8txenpin)
- * @overload Modbus::Modbus(uint8_t u8id)
- * @overload Modbus::Modbus()
- */
-Modbus::Modbus(uint8_t u8id, uint8_t u8txenpin)
-{
-    init(u8id, u8txenpin);
-}
-
-/**
- * @brief
  * Start class object.
  *
  * Sets up the serial port using specified baud rate.
