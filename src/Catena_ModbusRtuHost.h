@@ -15,8 +15,8 @@ Author:
 
 #pragma once
 
-#ifndef _Catena_ModbusRtuHostV2_h_
-#define _Catena_ModbusRtuHostV2_h_
+#ifndef _Catena_ModbusRtuHost_h_
+#define _Catena_ModbusRtuHost_h_
 
 #include <Catena_PollableInterface.h>
 #include "ModbusRtuV2.h"
@@ -198,4 +198,4 @@ private:
 
 }; // end namespace McciCatena
 
-#endif /* _Catena_ModbusRtuHostV2_h_ */
+#endif /* _Catena_ModbusRtuHost_h_ */

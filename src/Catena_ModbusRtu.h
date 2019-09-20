@@ -18,7 +18,7 @@ Author:
 #ifndef _CATENA_MODBUSRTU_H_
 #define _CATENA_MODBUSRTU_H_
 
-#include "Catena_ModbusRtuHostV2.h"
+#include "Catena_ModbusRtuHost.h"
 #include "ModbusRtu.h"
 
 namespace McciCatena {

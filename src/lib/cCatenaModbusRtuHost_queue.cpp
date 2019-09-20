@@ -14,7 +14,7 @@ Author:
 */
 
 
-#include "../Catena_ModbusRtuHostV2.h"
+#include "../Catena_ModbusRtuHost.h"
 
 using namespace McciCatena;
 
