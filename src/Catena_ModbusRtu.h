@@ -36,10 +36,10 @@ public:
 	// we save the poll() results for the background, or
 	// we might just want to look for completion other ways.
 	virtual void poll() { lastPollResult = this->Super::poll(); };
-	int8_t getPollResult() const { return this->lastPollResult; }
+	Error getPollResult() const { return this->lastPollResult; }
 
 private:
-	int8_t lastPollResult = 0;
+	Error lastPollResult = Error(0);
 	};
 
 // remember to register this with catena framework at startup, e.g.:

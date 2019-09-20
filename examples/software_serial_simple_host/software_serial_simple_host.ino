@@ -60,7 +60,7 @@ Modbus host(0); // this is host and RS-232 or USB-FTDI via software serial
 /**
  * This is a struct which contains a query to a device
  */
-modbus_t telegram;
+modbus_t datagram;
 
 unsigned long u32wait;
 
@@ -83,13 +83,13 @@ void loop() {
     if (millis() > u32wait) u8state++; // wait state
     break;
   case 1: 
-    telegram.u8id = 104; // device address
-    telegram.u8fct = 4; // function code (this one is registers read)
-    telegram.u16RegAdd = 3; // start address in device
-    telegram.u16CoilsNo = 1; // number of elements (coils or registers) to read
-    telegram.au16reg = au16data; // pointer to a memory array in the Arduino
+    datagram.u8id = 104; // device address
+    datagram.u8fct = 4; // function code (this one is registers read)
+    datagram.u16RegAdd = 3; // start address in device
+    datagram.u16CoilsNo = 1; // number of elements (coils or registers) to read
+    datagram.au16reg = au16data; // pointer to a memory array in the Arduino
 
-    host.query( telegram ); // send query (only once)
+    host.query( datagram ); // send query (only once)
     u8state++;
     break;
   case 2:
