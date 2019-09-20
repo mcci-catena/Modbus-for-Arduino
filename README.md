@@ -1,10 +1,10 @@
 # Modbus for Arduino
 
-This library provides a Serial Modbus implementation for Arduino.
+This library provides a Modbus implementation for Arduino.
 
-A primary goal was to enable industrial communication for the Arduino in order to link it to industrial devices such as HMIs, CNCs, PLCs, temperature regulators or speed drives.
+The library enables industrial communication for the Arduino by linking it to industrial devices such as HMIs, CNCs, PLCs, temperature regulators or speed drives.
 
-It supports software serial as well as hardware serial. The initial changes from Helium6072 are generalized so that you can use any object with Serial semantics.
+The library supports software serial as well as hardware serial. The initial changes from Helium6072 are generalized so that you can use any object with Serial semantics.
 
 [![GitHub release](https://img.shields.io/github/release/mcci-catena/Modbus-for-Arduino/all.svg)](https://github.com/mcci-catena/Modbus-for-Arduino/releases/latest) ![GitHub commits](https://img.shields.io/github/commits-since/mcci-catena/Modbus-for-Arduino/latest.svg)
 
@@ -13,26 +13,37 @@ It supports software serial as well as hardware serial. The initial changes from
 <!--
   This TOC uses the VS Code markdown TOC extension AlanWalk.markdown-toc.
   We strongly recommend updating using VS Code, the markdown-toc extension and the
-  bierner.markdown-preview-github-styles extension.
+  bierner.markdown-preview-github-styles extension.  Note that if you are using
+  VS Code 1.29 and Markdown TOC 1.5.6, https://github.com/AlanWalk/markdown-toc/issues/65
+  applies -- you must change your line-ending to some non-auto value in Settings>
+  Text Editor>Files.  `\n` works for me.
 -->
 
+<!-- markdownlint-disable MD033 MD004 -->
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable -->
 <!-- TOC depthFrom:2 updateOnSave:true -->
 
 - [Terminology](#terminology)
 - [Library Contents](#library-contents)
-	- [Examples](#examples)
-		- [examples/advanced_device](#examplesadvanced_device)
-		- [examples/RS485_device](#examplesrs485_device)
-		- [examples/simple_host](#examplessimple_host)
-		- [examples/simple_device](#examplessimple_device)
-		- [examples/software_serial_simple_host](#examplessoftware_serial_simple_host)
+	- [Files](#files)
+	- [examples/advanced_device](#examplesadvanced_device)
+	- [examples/RS485_device](#examplesrs485_device)
+	- [examples/simple_host](#examplessimple_host)
+	- [examples/simple_device](#examplessimple_device)
+	- [examples/software_serial_simple_host](#examplessoftware_serial_simple_host)
+	- [examples/catena_simple_host](#examplescatena_simple_host)
 - [Installation Procedure](#installation-procedure)
 - [Known Issues](#known-issues)
 - [To-Do List](#to-do-list)
-- [Parity, stop bits, etc](#parity-stop-bits-etc)
+- [Serial port, baud rate, configuration](#serial-port-baud-rate-configuration)
 - [The `ModbusSerial<>` Template Class](#the-modbusserial-template-class)
+- [Legacy names](#legacy-names)
+- [Queueing datagrams (host only)](#queueing-datagrams-host-only)
 
 <!-- /TOC -->
+<!-- markdownlint-restore -->
+<!-- Due to a bug in Markdown TOC, the table is formatted incorrectly if tab indentation is set other than 4. Due to another bug, this comment must be *after* the TOC entry. -->
 
 ## Terminology
 
@@ -40,43 +51,52 @@ Modbus literature uses "host" and "slave". Time has moved on, so in this library
 
 ## Library Contents
 
+### Files
+
+This list is not exhaustive, but highlights some of the more important files.
+
 File | Description
 -----|------------
-ModbusRTU.h | The library
-LICENSE.txt | GNU Licence file
-keywords.txt | Arduino IDE colouring syntax
-documentation/* | Library documentation generated with Doxygen.
-examples/* | Sample sketches to implement miscellaneous settings.
+`LICENSE.txt` | GNU License file
+`keywords.txt` | Arduino IDE coloring syntax
+`documentation/*` | Library documentation generated with Doxygen.
+`examples/*` | Sample sketches to implement miscellaneous settings.
+`src/ModbusRtuV2.h` | The library header file
+`src/ModbusRtu.h` | A wrapper header file that declares additional names for compatibility with older versions of the library.
+`src/Catena_ModbusRtuHost.h` | Slightly higher abstraction layer for Modbus host use. Includes ability to queue datagrams for sequential processing, with callbacks on completion. Integrates with the Catena polling system.
+`src/lib/ModbusRtu.cpp` | The main source file for the library.
 
-### Examples
-
-#### examples/advanced_device
+### examples/advanced_device
 
 Modbus device node, which links Arduino pins to the Modbus port.
 
-#### examples/RS485_device
+### examples/RS485_device
 
 Modbus device adapted to the RS485 port.
 
-#### examples/simple_host
+### examples/simple_host
 
 Modbus host node with a single query.
 
-#### examples/simple_device
+### examples/simple_device
 
 Modbus device node with a link array.
 
-#### examples/software_serial_simple_host
+### examples/software_serial_simple_host
 
 Modbus host node that works via software serial.
+
+### examples/catena_simple_host
+
+Modbus host node implementation demonstrating the use of the Catena polling system.
 
 ## Installation Procedure
 
 Refer to this documentation to install this library:
 
-http://arduino.cc/en/Guide/Libraries
+[`arduino.cc/en/Guide/Libraries`](https://arduino.cc/en/Guide/Libraries)
 
-Starting with version 1.0.5, you can install 3rd party libraries in the IDE.
+Starting with IDE version 1.0.5, you can install 3rd party libraries in the IDE.
 
 Do not unzip the downloaded library, leave it as is.
 
@@ -88,7 +108,7 @@ Return to the Sketch > Import Library menu. You should now see the library at th
 
 The zip file will have been expanded in the libraries folder in your Arduino sketches directory.
 
-NB : the library will be available to use in sketches, but examples for the library will not be exposed in the File > Examples until after the IDE has restarted.
+Note: the library will be available to use in sketches, but examples for the library will not be exposed in the `File > Examples` until after the IDE has restarted.
 
 ## Known Issues
 
@@ -98,27 +118,27 @@ The original library was not compatible with ARDUINO LEONARDO. This library has 
 
 Common to host and device:
 
-1) End frame delay, also known as T35
+1. End frame delay, also known as T35
 
-2) Test it with several Arduino boards: UNO, Mega, etc..
+2. Test it with several Arduino boards: UNO, Mega, etc..
 
-3) Extend it to Leonardo
+3. Extend it to Leonardo
 
 Host:
 
-1) Function code 1 and 2 still not implemented
+1. Function code 1 and 2 still not implemented
 
-2) Function code 15 still not implemented
+2. Function code 15 still not implemented
 
-3) Other codes under development
+3. Other codes under development
 
-## Parity, stop bits, etc
+## Serial port, baud rate, configuration
 
 The `Modbus::begin()` method, in its complete form, takes three arguments:
 
 - `ModbusPort *pPort`: this object maps from  abstract serial port semantics onto a concrete serial port.
 
-- `unsigned long baudRate`: specifies the baudrate in bits per second.
+- `unsigned long baudRate`: specifies the baud rate in bits per second.
 
 - `uint16_t config`: specifies the configuration of the serial port. Normally this should be `SERIAL_8N2`(8 data bits, no parity, two stop bits), but other settings may be chosen. NB: `SoftwareSerial` doesn't yet honor these settings.
 
@@ -155,3 +175,14 @@ Declaring a Modbus instance takes two steps (which can be done in any order).
    ```
 
    We tend to prefer the former form, as it makes the examples more portable.
+
+## Legacy names
+
+For compatibility with earlier versions of this library, we supply the header file `ModbusRtu.h`.  This file includes `ModbusRtuV2.h`, and then exposes a number of names and types in the root namespace.
+
+Similarly, the legacy header file `Catena_ModbusRtu.h` calls `Catena_ModbusRtuHost.h` and defines a few names for backward compatibility.
+
+## Queueing datagrams (host only)
+
+Starting with v0.4.0, this library supports queued datagram operations with callbacks. To take advantage of this, declare your datagrams as `McciCatena::cModbusDatagram` objects (rather than `modbus_datagram_t` objects).  Create one or more callback functions of type `McciCatena::CatenaModbusRtu_DatagramCb_t`.
+Then use `cCatenaModbusRtuHost::queue()` to submit your datagrams; they'll be processed in FIFO order.

@@ -59,7 +59,7 @@ static inline void powerOn(void)
 /**
  * This is a struct which contains a message to a device
  */
-modbus_t telegram;
+modbus_datagram_t datagram;
 
 unsigned long u32wait;
 
@@ -87,14 +87,14 @@ void loop() {
     if (long(millis() - u32wait) > 0) u8state++; // wait state
     break;
   case 1:
-    telegram.u8id = u8addr; // device address
-    telegram.u8fct = 3; // function code (this one is registers read)
-    telegram.u16RegAdd = 1700; // start address in device
-    telegram.u16CoilsNo = 4; // number of elements (coils or registers) to read
-    telegram.au16reg = au16data; // pointer to a memory array in the Arduino
+    datagram.u8id = u8addr; // device address
+    datagram.u8fct = 3; // function code (this one is registers read)
+    datagram.u16RegAdd = 1700; // start address in device
+    datagram.u16CoilsNo = 4; // number of elements (coils or registers) to read
+    datagram.au16reg = au16data; // pointer to a memory array in the Arduino
 
     host.setLastError(ERR_SUCCESS);
-    host.query( telegram ); // send query (only once)
+    host.query( datagram ); // send query (only once)
     u8state++;
     break;
   case 2:

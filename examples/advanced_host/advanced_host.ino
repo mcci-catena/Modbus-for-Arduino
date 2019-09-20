@@ -32,24 +32,24 @@ Modbus host(0, 0); // this is host and RS-232 or USB-FTDI
 /**
  * This is a struct which contains a query to a device
  */
-modbus_t telegram[2];
+modbus_t datagram[2];
 
 unsigned long u32wait;
 
 void setup() {
-  // telegram 0: read registers
-  telegram[0].u8id = 1; // device address
-  telegram[0].u8fct = 3; // function code (this one is registers read)
-  telegram[0].u16RegAdd = 0; // start address in device
-  telegram[0].u16CoilsNo = 4; // number of elements (coils or registers) to read
-  telegram[0].au16reg = au16data; // pointer to a memory array in the Arduino
+  // datagram 0: read registers
+  datagram[0].u8id = 1; // device address
+  datagram[0].u8fct = 3; // function code (this one is registers read)
+  datagram[0].u16RegAdd = 0; // start address in device
+  datagram[0].u16CoilsNo = 4; // number of elements (coils or registers) to read
+  datagram[0].au16reg = au16data; // pointer to a memory array in the Arduino
 
-  // telegram 1: write a single register
-  telegram[1].u8id = 1; // device address
-  telegram[1].u8fct = 6; // function code (this one is write a single register)
-  telegram[1].u16RegAdd = 4; // start address in device
-  telegram[1].u16CoilsNo = 1; // number of elements (coils or registers) to read
-  telegram[1].au16reg = au16data+4; // pointer to a memory array in the Arduino
+  // datagram 1: write a single register
+  datagram[1].u8id = 1; // device address
+  datagram[1].u8fct = 6; // function code (this one is write a single register)
+  datagram[1].u16RegAdd = 4; // start address in device
+  datagram[1].u16CoilsNo = 1; // number of elements (coils or registers) to read
+  datagram[1].au16reg = au16data+4; // pointer to a memory array in the Arduino
 	
   host.begin(&mySerial, 19200 ); // baud-rate at 19200
   host.setTimeOut( 5000 ); // if there is no answer in 5000 ms, roll over
@@ -63,7 +63,7 @@ void loop() {
     if (millis() > u32wait) u8state++; // wait state
     break;
   case 1: 
-    host.query( telegram[u8query] ); // send query (only once)
+    host.query( datagram[u8query] ); // send query (only once)
     u8state++;
 	u8query++;
 	if (u8query > 2) u8query = 0;

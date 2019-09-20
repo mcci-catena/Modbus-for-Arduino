@@ -36,7 +36,21 @@
  *
  */
 
-#include "ModbusRtu.h"
+#include "ModbusRtuV2.h"
+
+using namespace McciCatena;
+
+const ModbusFunction Modbus::fctsupported[] =
+    {
+    ModbusFunction::READ_COILS,
+    ModbusFunction::READ_DISCRETE_INPUT,
+    ModbusFunction::READ_REGISTERS,
+    ModbusFunction::READ_INPUT_REGISTER,
+    ModbusFunction::WRITE_COIL,
+    ModbusFunction::WRITE_REGISTER,
+    ModbusFunction::WRITE_MULTIPLE_COILS,
+    ModbusFunction::WRITE_MULTIPLE_REGISTERS
+    };
 
 /* _____PUBLIC FUNCTIONS_____________________________________________________ */
 
@@ -90,7 +104,7 @@ void Modbus::begin(ModbusPort *pPort, unsigned long u32speed, uint16_t config)
 
 /**
  * @brief
- * Method to write a new device ID address
+ * Method to write a new device address
  *
  * @param   u8id    new device address between 1 and 247
  * @ingroup setup
@@ -204,7 +218,7 @@ uint16_t Modbus::getErrCnt()
  * @return = 0 IDLE, = 1 WAITING FOR ANSWER
  * @ingroup buffer
  */
-uint8_t Modbus::getState()
+Modbus::CommState Modbus::getState()
 {
     return u8state;
 }
@@ -215,12 +229,12 @@ uint8_t Modbus::getState()
  * @return   last reported error, if non zero. Negative value means a protocol error, positive is a Modbus exception code
  * @ingroup buffer
  */
-ERR_LIST Modbus::getLastError()
+Modbus::Error Modbus::getLastError()
 {
     return this->lastError;
 }
 
-void Modbus::setLastError(ERR_LIST errorValue)
+void Modbus::setLastError(Modbus::Error errorValue)
 {
     this->lastError = errorValue;
 }
@@ -228,109 +242,101 @@ void Modbus::setLastError(ERR_LIST errorValue)
 /**
  * @brief
  * *** Only Modbus host ***
- * Generate a query to a device with a modbus_t telegram structure
- * The host must be in COM_IDLE mode. After it, its state would be COM_WAITING.
+ * Generate a query to a device with a modbus_datagram_t datagram structure
+ * The host must be in CommState::IDLE mode. After it, its state would be CommState::WAITING.
  * This method has to be called only in loop() section.
  *
- * @see modbus_t
- * @param modbus_t  modbus telegram structure (id, fct, ...)
+ * @see modbus_datagram_t
+ * @param modbus_datagram_t  modbus datagram structure (id, fct, ...)
  * @ingroup loop
  * @todo finish function 15
  */
-ERR_LIST Modbus::query( modbus_t telegram )
+Modbus::Error Modbus::query( modbus_datagram_t &datagram )
 {
     uint8_t u8regsno, u8bytesno;
-    if (u8id!=0) return ERR_NOT_HOST;
-    if (u8state != COM_IDLE) return ERR_POLLING;
+    if (u8id!=0) return Error::NOT_HOST;
+    if (u8state != CommState::IDLE) return Error::POLLING;
 
-    if ((telegram.u8id==0) || (telegram.u8id>247)) return ERR_ILLEGAL_DEVICE_ADDRESS;
+    if ((datagram.u8id==0) || (datagram.u8id>247)) return Error::ILLEGAL_DEVICE_ADDRESS;
 
-    au16regs = telegram.au16reg;
+    au16regs = datagram.au16reg;
 
-    // telegram header
-    au8Buffer[ ID ]         = telegram.u8id;
-    au8Buffer[ FUNC ]       = telegram.u8fct;
-    au8Buffer[ ADD_HI ]     = highByte(telegram.u16RegAdd );
-    au8Buffer[ ADD_LO ]     = lowByte( telegram.u16RegAdd );
+    // datagram header
+    au8Buffer[ unsigned(ModbusMessageOffset::ID) ]         = datagram.u8id;
+    au8Buffer[ unsigned(ModbusMessageOffset::FUNC) ]       = datagram.u8fct;
+    this->putMessageAddress(datagram.u16RegAdd);
 
-    switch( telegram.u8fct )
+    switch( ModbusFunction(datagram.u8fct) )
     {
-    case MB_FC_READ_COILS:
-    case MB_FC_READ_DISCRETE_INPUT:
-    case MB_FC_READ_REGISTERS:
-    case MB_FC_READ_INPUT_REGISTER:
-        au8Buffer[ NB_HI ]      = highByte(telegram.u16CoilsNo );
-        au8Buffer[ NB_LO ]      = lowByte( telegram.u16CoilsNo );
+    case ModbusFunction::READ_COILS:
+    case ModbusFunction::READ_DISCRETE_INPUT:
+    case ModbusFunction::READ_REGISTERS:
+    case ModbusFunction::READ_INPUT_REGISTER:
+        this->putMessageCount(datagram.u16CoilsNo);
         u8BufferSize = 6;
         break;
-    case MB_FC_WRITE_COIL:
-        au8Buffer[ NB_HI ]      = ((au16regs[0] > 0) ? 0xff : 0);
-        au8Buffer[ NB_LO ]      = 0;
+    case ModbusFunction::WRITE_COIL:
+        this->putMessageCount(((au16regs[0] > 0) ? 0xff00 : 0));
         u8BufferSize = 6;
         break;
-    case MB_FC_WRITE_REGISTER:
-        au8Buffer[ NB_HI ]      = highByte(au16regs[0]);
-        au8Buffer[ NB_LO ]      = lowByte(au16regs[0]);
+    case ModbusFunction::WRITE_REGISTER:
+        this->putMessageCount(this->au16regs[0]);
         u8BufferSize = 6;
         break;
-    case MB_FC_WRITE_MULTIPLE_COILS: // TODO: implement "sending coils"
-        u8regsno = telegram.u16CoilsNo / 16;
+    case ModbusFunction::WRITE_MULTIPLE_COILS: // TODO: implement "sending coils"
+        u8regsno = datagram.u16CoilsNo / 16;
         u8bytesno = u8regsno * 2;
-        if ((telegram.u16CoilsNo % 16) != 0)
+        if ((datagram.u16CoilsNo % 16) != 0)
         {
             u8bytesno++;
             u8regsno++;
         }
 
-        au8Buffer[ NB_HI ]      = highByte(telegram.u16CoilsNo );
-        au8Buffer[ NB_LO ]      = lowByte( telegram.u16CoilsNo );
-        au8Buffer[ NB_LO+1 ]    = u8bytesno;
+        this->putMessageCount(datagram.u16CoilsNo);
+        au8Buffer[ unsigned(ModbusMessageOffset::NB_LO) + 1 ]    = u8bytesno;
         u8BufferSize = 7;
 
         u8regsno = u8bytesno = 0; // now auxiliary registers
-        for (uint16_t i = 0; i < telegram.u16CoilsNo; i++)
+        for (uint16_t i = 0; i < datagram.u16CoilsNo; i++)
         {
-
+            // TODO(tmm@mcci.com) -- what goes here?
 
         }
         break;
 
-    case MB_FC_WRITE_MULTIPLE_REGISTERS:
-        au8Buffer[ NB_HI ]      = highByte(telegram.u16CoilsNo );
-        au8Buffer[ NB_LO ]      = lowByte( telegram.u16CoilsNo );
-        au8Buffer[ NB_LO+1 ]    = (uint8_t) ( telegram.u16CoilsNo * 2 );
+    case ModbusFunction::WRITE_MULTIPLE_REGISTERS:
+        this->putMessageCount(datagram.u16CoilsNo);
+        au8Buffer[ unsigned(ModbusMessageOffset::NB_LO)+1 ]    = (uint8_t) ( datagram.u16CoilsNo * 2 );
         u8BufferSize = 7;
 
-        for (uint16_t i=0; i< telegram.u16CoilsNo; i++)
+        for (uint16_t i=0; i< datagram.u16CoilsNo; i++)
         {
-            au8Buffer[ u8BufferSize ] = highByte( au16regs[ i ] );
-            u8BufferSize++;
-            au8Buffer[ u8BufferSize ] = lowByte( au16regs[ i ] );
-            u8BufferSize++;
+            this->putMessageWord(u8BufferSize, au16regs[i]);
+            u8BufferSize += 2;
         }
         break;
     }
 
     sendTxBuffer();
-    u8state = COM_WAITING;
-    return ERR_SUCCESS;
+    u8state = CommState::WAITING;
+    return Error::SUCCESS;
 }
 
 /**
  * @brief *** Only for Modbus host ***
  * This method checks if there is any incoming answer if pending.
- * If there is no answer, it would change host state to COM_IDLE.
+ * If there is no answer, it would change host state to CommState::IDLE.
  * This method must be called only at loop section.
  * Avoid any delay() function.
  *
  * Any incoming data would be redirected to au16regs pointer,
- * as defined in its modbus_t query telegram.
+ * as defined in its modbus_datagram_t query datagram.
  *
  * @params  nothing
- * @return 0 if no progress, ERR_LIST code < 0 if error, +1 if operation completed.
+ * @return 0 if no progress, Modbus::Error code < 0 if error, +1 if operation completed.
  * @ingroup loop
  */
-int16_t Modbus::poll()
+Modbus::Error Modbus::poll()
 {
     // check if there is any incoming frame
     int current;
@@ -338,70 +344,73 @@ int16_t Modbus::poll()
 
     if (this->getTimeOutState())
     {
-        u8state = COM_IDLE;
-        lastError = ERR_NO_REPLY;
+        u8state = CommState::IDLE;
+        lastError = Error::NO_REPLY;
         u16errCnt++;
-        return ERR_NO_REPLY;
+        return Error::NO_REPLY;
     }
 
-    if (current == 0) return 0;
+    if (current == 0) return Error::SUCCESS;
 
     // check T35 after frame end or still no frame end
     if (current != lastRec)
     {
         lastRec = current;
-        u32time = millis() + T35;
-        return 0;
+        u32time = millis() + kT35;
+        return Error::SUCCESS;
     }
-    if ((int32_t)(millis() - u32time) < 0) return 0;
+    if ((int32_t)(millis() - u32time) < 0) return Error::SUCCESS;
 
-    // transfer Serial buffer frame to auBuffer
+    // transfer Serial buffer frame to au8Buffer
     lastRec = 0;
     uint8_t u8Len;
-    ERR_LIST errcode;
+    Error errcode;
 
     u8Len = getRxBuffer(errcode);
-    if (errcode != 0)
+    if (errcode != Error::SUCCESS)
     {
         this->lastError = errcode;
-        u8state = COM_IDLE;
+        u8state = CommState::IDLE;
         u16errCnt++;
         return errcode;
     }
 
     // validate message: id, CRC, FCT, exception
     errcode = validateAnswer();
-    if (errcode != 0)
+    if (errcode != Error::SUCCESS)
     {
         this->lastError = errcode;
-        u8state = COM_IDLE;
+        u8state = CommState::IDLE;
         return errcode;
     }
 
     // process answer
-    switch( au8Buffer[ FUNC ] )
+    switch( ModbusFunction( au8Buffer[ unsigned(ModbusMessageOffset::FUNC) ] ) )
     {
-    case MB_FC_READ_COILS:
-    case MB_FC_READ_DISCRETE_INPUT:
+    case ModbusFunction::READ_COILS:
+    case ModbusFunction::READ_DISCRETE_INPUT:
         // call get_FC1 to transfer the incoming message to au16regs buffer
         get_FC1( );
         break;
-    case MB_FC_READ_INPUT_REGISTER:
-    case MB_FC_READ_REGISTERS :
+    case ModbusFunction::READ_INPUT_REGISTER:
+    case ModbusFunction::READ_REGISTERS :
         // call get_FC3 to transfer the incoming message to au16regs buffer
         get_FC3( );
         break;
-    case MB_FC_WRITE_COIL:
-    case MB_FC_WRITE_REGISTER :
-    case MB_FC_WRITE_MULTIPLE_COILS:
-    case MB_FC_WRITE_MULTIPLE_REGISTERS :
+    case ModbusFunction::WRITE_COIL:
+    case ModbusFunction::WRITE_REGISTER :
+    case ModbusFunction::WRITE_MULTIPLE_COILS:
+    case ModbusFunction::WRITE_MULTIPLE_REGISTERS :
         // nothing to do
         break;
     default:
         break;
     }
-    u8state = COM_IDLE;
-    return 1;
+    u8state = CommState::IDLE;
+
+    // BUG(tmm@mcci.com) -- this is not an error, and it's not the
+    // name of the error code. But...
+    return Error(1);
 }
 
 /**
@@ -437,18 +446,18 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
     if (current != lastRec)
     {
         lastRec = current;
-        u32time = millis() + T35;
+        u32time = millis() + kT35;
         return 0;
     }
     if ((int32_t)(millis() - u32time) < 0) return 0;
 
     lastRec = 0;
     uint8_t u8Len;
-    ERR_LIST errcode;
+    Error errcode;
 
     u8Len = getRxBuffer(errcode);
 
-    if (errcode != 0)
+    if (errcode != Error::SUCCESS)
     {
         lastError = errcode;
         return -1;
@@ -457,7 +466,7 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
     // check device id -- since port->available() was non-zero, we can assume
     // that at least one byte was received.  We check the address to save
     // CRC calculations, in case the message is not for us.
-    if (au8Buffer[ ID ] != u8id)
+    if (au8Buffer[ unsigned(ModbusMessageOffset::ID) ] != u8id)
     {
         // TODO(tmm@mcci.com) increment a statistic
         return 0;
@@ -465,11 +474,11 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
 
     // validate message: CRC, FCT, address and size
     errcode = validateRequest();
-    if (errcode != 0)
+    if (errcode != Error::SUCCESS)
     {
-        if (errcode > 0)
+        if (errcode > Error::SUCCESS)
         {
-            buildException( errcode );
+            buildException( ModbusException_t(errcode) );
             sendTxBuffer();
         }
         lastError = errcode;
@@ -477,29 +486,29 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
     }
 
     u32timeOut = millis() + uint32_t(u16timeOut);
-    lastError = ERR_SUCCESS;
+    lastError = Error::SUCCESS;
 
     // process message
-    switch( au8Buffer[ FUNC ] )
+    switch( ModbusFunction(au8Buffer[ unsigned(ModbusMessageOffset::FUNC) ]) )
     {
-    case MB_FC_READ_COILS:
-    case MB_FC_READ_DISCRETE_INPUT:
+    case ModbusFunction::READ_COILS:
+    case ModbusFunction::READ_DISCRETE_INPUT:
         return process_FC1( regs, u8size );
         break;
-    case MB_FC_READ_INPUT_REGISTER:
-    case MB_FC_READ_REGISTERS :
+    case ModbusFunction::READ_INPUT_REGISTER:
+    case ModbusFunction::READ_REGISTERS :
         return process_FC3( regs, u8size );
         break;
-    case MB_FC_WRITE_COIL:
+    case ModbusFunction::WRITE_COIL:
         return process_FC5( regs, u8size );
         break;
-    case MB_FC_WRITE_REGISTER :
+    case ModbusFunction::WRITE_REGISTER :
         return process_FC6( regs, u8size );
         break;
-    case MB_FC_WRITE_MULTIPLE_COILS:
+    case ModbusFunction::WRITE_MULTIPLE_COILS:
         return process_FC15( regs, u8size );
         break;
-    case MB_FC_WRITE_MULTIPLE_REGISTERS :
+    case ModbusFunction::WRITE_MULTIPLE_REGISTERS :
         return process_FC16( regs, u8size );
         break;
     default:
@@ -531,17 +540,17 @@ void Modbus::init(uint8_t u8id)
  * The ring buffer is drained, and is assumed to represent the
  * entire message.
  *
- * @return buffer size if OK, ERR_BUFF_OVERFLOW if u8BufferSize >= MAX_BUFFER
+ * @return buffer size if OK, Error::BUFF_OVERFLOW if u8BufferSize >= Modbus::kMaxBufferSize
  * @ingroup buffer
  */
-uint8_t Modbus::getRxBuffer(ERR_LIST &errcode)
+uint8_t Modbus::getRxBuffer(Modbus::Error &errcode)
 {
     boolean bBuffOverflow = false;
 
     u8BufferSize = 0;
     while ( port->available() )
         {
-        if (u8BufferSize >= MAX_BUFFER)
+        if (u8BufferSize >= sizeof(this->au8Buffer))
             bBuffOverflow = true;
         else
             {
@@ -553,11 +562,11 @@ uint8_t Modbus::getRxBuffer(ERR_LIST &errcode)
     if (bBuffOverflow)
     {
         u16errCnt++;
-        errcode = ERR_BUFF_OVERFLOW;
+        errcode = Error::BUFF_OVERFLOW;
     }
     else
     {
-        errcode = ERR_SUCCESS;
+        errcode = Error::SUCCESS;
     }
     return u8BufferSize;
 }
@@ -652,7 +661,7 @@ uint16_t Modbus::calcCRC(uint8_t u8length)
  * @return 0 if OK, non-zero error code if anything fails
  * @ingroup buffer
  */
-ERR_LIST Modbus::validateRequest()
+Modbus::Error Modbus::validateRequest()
 {
     // check message crc vs calculated crc
     uint16_t u16MsgCRC =
@@ -661,14 +670,14 @@ ERR_LIST Modbus::validateRequest()
     if ( calcCRC( u8BufferSize-2 ) != u16MsgCRC )
     {
         u16errCnt ++;
-        return ERR_BAD_CRC;
+        return Error::BAD_CRC;
     }
 
     // check fct code
     boolean isSupported = false;
     for (uint8_t i = 0; i< sizeof( fctsupported ); i++)
     {
-        if (fctsupported[i] == au8Buffer[FUNC])
+        if (fctsupported[i] == ModbusFunction(au8Buffer[unsigned(ModbusMessageOffset::FUNC)]))
         {
             isSupported = 1;
             break;
@@ -677,42 +686,42 @@ ERR_LIST Modbus::validateRequest()
     if (!isSupported)
     {
         u16errCnt ++;
-        return ERR_LIST(EXC_FUNC_CODE);
+        return Modbus::Error::ILLEGAL_MB_FUNCTION;
     }
 
     // check start address & nb range
     uint16_t u16regs = 0;
     uint8_t u8regs;
-    switch ( au8Buffer[ FUNC ] )
+    switch ( ModbusFunction(au8Buffer[ unsigned(ModbusMessageOffset::FUNC) ]) )
     {
-    case MB_FC_READ_COILS:
-    case MB_FC_READ_DISCRETE_INPUT:
-    case MB_FC_WRITE_MULTIPLE_COILS:
-        u16regs = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ]) / 16;
-        u16regs += word( au8Buffer[ NB_HI ], au8Buffer[ NB_LO ]) /16;
+    case ModbusFunction::READ_COILS:
+    case ModbusFunction::READ_DISCRETE_INPUT:
+    case ModbusFunction::WRITE_MULTIPLE_COILS:
+        u16regs = this->getMessageAddress() / 16;
+        u16regs += this->getMessageCount() /16;
         u8regs = (uint8_t) u16regs;
-        if (u8regs > u8regsize) return ERR_LIST(EXC_ADDR_RANGE);
+        if (u8regs > u8regsize) return Modbus::Error::ILLEGAL_MB_ADDRESS;
         break;
-    case MB_FC_WRITE_COIL:
-        u16regs = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ]) / 16;
+    case ModbusFunction::WRITE_COIL:
+        u16regs = this->getMessageAddress() / 16;
         u8regs = (uint8_t) u16regs;
-        if (u8regs > u8regsize) return ERR_LIST(EXC_ADDR_RANGE);
+        if (u8regs > u8regsize) return Modbus::Error::ILLEGAL_MB_ADDRESS;
         break;
-    case MB_FC_WRITE_REGISTER :
-        u16regs = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ]);
+    case ModbusFunction::WRITE_REGISTER :
+        u16regs = this->getMessageAddress();
         u8regs = (uint8_t) u16regs;
-        if (u8regs > u8regsize) return ERR_LIST(EXC_ADDR_RANGE);
+        if (u8regs > u8regsize) return Modbus::Error::ILLEGAL_MB_ADDRESS;
         break;
-    case MB_FC_READ_REGISTERS :
-    case MB_FC_READ_INPUT_REGISTER :
-    case MB_FC_WRITE_MULTIPLE_REGISTERS :
-        u16regs = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ]);
-        u16regs += word( au8Buffer[ NB_HI ], au8Buffer[ NB_LO ]);
+    case ModbusFunction::READ_REGISTERS :
+    case ModbusFunction::READ_INPUT_REGISTER :
+    case ModbusFunction::WRITE_MULTIPLE_REGISTERS :
+        u16regs = this->getMessageAddress();
+        u16regs += this->getMessageCount();
         u8regs = (uint8_t) u16regs;
-        if (u8regs > u8regsize) return ERR_LIST(EXC_ADDR_RANGE);
+        if (u8regs > u8regsize) return Modbus::Error::ILLEGAL_MB_ADDRESS;
         break;
     }
-    return ERR_SUCCESS; // OK, no exception code thrown
+    return Error::SUCCESS; // OK, no exception code thrown
 }
 
 /**
@@ -722,35 +731,34 @@ ERR_LIST Modbus::validateRequest()
  * @return 0 if OK, EXCEPTION if anything fails
  * @ingroup buffer
  */
-ERR_LIST Modbus::validateAnswer()
+Modbus::Error Modbus::validateAnswer()
 {
     if (u8BufferSize < 4)
     {
         u16errCnt ++;
-        return ERR_RUNT_PACKET;
+        return Error::RUNT_PACKET;
     }
     // check message crc vs calculated crc
-    uint16_t u16MsgCRC =
-        ((au8Buffer[u8BufferSize - 2] << 8)
-         | au8Buffer[u8BufferSize - 1]); // combine the crc Low & High bytes
+    uint16_t u16MsgCRC = this->getMessageWord(u8BufferSize - 2);
+
     if ( calcCRC( u8BufferSize-2 ) != u16MsgCRC )
     {
         u16errCnt ++;
-        return ERR_BAD_CRC;
+        return Error::BAD_CRC;
     }
 
     // check exception
-    if ((au8Buffer[ FUNC ] & 0x80) != 0)
+    if ((au8Buffer[ unsigned(ModbusMessageOffset::FUNC) ] & 0x80) != 0)
     {
         u16errCnt ++;
-        return ERR_LIST(au8Buffer[EXCEPTION]);
+        return Error(au8Buffer[ unsigned(ModbusMessageOffset::EXCEPTION) ]);
     }
 
     // check fct code
     boolean isSupported = false;
     for (uint8_t i = 0; i< sizeof( fctsupported ); i++)
     {
-        if (fctsupported[i] == au8Buffer[FUNC])
+        if (fctsupported[i] == ModbusFunction(au8Buffer[unsigned(ModbusMessageOffset::FUNC)]))
         {
             isSupported = 1;
             break;
@@ -759,10 +767,10 @@ ERR_LIST Modbus::validateAnswer()
     if (!isSupported)
     {
         u16errCnt ++;
-        return ERR_LIST(EXC_FUNC_CODE);
+        return Error::ILLEGAL_MB_FUNCTION;
     }
 
-    return ERR_SUCCESS; // OK, no exception code thrown
+    return Error::SUCCESS; // OK, no exception code thrown
 }
 
 /**
@@ -771,14 +779,14 @@ ERR_LIST Modbus::validateAnswer()
  *
  * @ingroup buffer
  */
-void Modbus::buildException( uint8_t u8exception )
+void Modbus::buildException( ModbusException_t u8exception )
 {
-    uint8_t u8func = au8Buffer[ FUNC ];  // get the original FUNC code
+    uint8_t u8func = au8Buffer[ unsigned(ModbusMessageOffset::FUNC) ];  // get the original FUNC code
 
-    au8Buffer[ ID ]      = u8id;
-    au8Buffer[ FUNC ]    = u8func + 0x80;
-    au8Buffer[ 2 ]       = u8exception;
-    u8BufferSize         = EXCEPTION_SIZE;
+    au8Buffer[ unsigned(ModbusMessageOffset::ID) ]        = u8id;
+    au8Buffer[ unsigned(ModbusMessageOffset::FUNC) ]      = u8func + 0x80;
+    au8Buffer[ unsigned(ModbusMessageOffset::EXCEPTION) ] = unsigned(u8exception);
+    u8BufferSize = unsigned(ModbusMessageSize::EXCEPTION);
 }
 
 /**
@@ -814,9 +822,7 @@ void Modbus::get_FC3()
 
     for (i=0; i< au8Buffer[ 2 ] /2; i++)
     {
-        au16regs[ i ] = word(
-                            au8Buffer[ u8byte ],
-                            au8Buffer[ u8byte +1 ]);
+        au16regs[ i ] = this->getMessageWord(u8byte);
         u8byte += 2;
     }
 }
@@ -836,14 +842,14 @@ int8_t Modbus::process_FC1( uint16_t *regs, uint8_t u8size )
     uint16_t u16currentCoil, u16coil;
 
     // get the first and last coil from the message
-    uint16_t u16StartCoil = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ] );
-    uint16_t u16Coilno = word( au8Buffer[ NB_HI ], au8Buffer[ NB_LO ] );
+    uint16_t u16StartCoil = this->getMessageAddress();
+    uint16_t u16Coilno = this->getMessageCount();
 
     // put the number of bytes in the outcoming message
     u8bytesno = (uint8_t) (u16Coilno / 8);
     if (u16Coilno % 8 != 0) u8bytesno ++;
-    au8Buffer[ ADD_HI ]  = u8bytesno;
-    u8BufferSize         = ADD_LO;
+    au8Buffer[ unsigned(ModbusMessageOffset::ADD_HI) ]  = u8bytesno;
+    u8BufferSize         = unsigned(ModbusMessageOffset::ADD_LO);
 
     // read each coil from the register map and put its value inside the outcoming message
     u8bitsno = 0;
@@ -885,8 +891,8 @@ int8_t Modbus::process_FC1( uint16_t *regs, uint8_t u8size )
 int8_t Modbus::process_FC3( uint16_t *regs, uint8_t u8size )
 {
 
-    uint8_t u8StartAdd = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ] );
-    uint8_t u8regsno = word( au8Buffer[ NB_HI ], au8Buffer[ NB_LO ] );
+    uint8_t u8StartAdd = this->getMessageAddress();
+    uint8_t u8regsno = this->getMessageCount();
     uint8_t u8CopyBufferSize;
     uint8_t i;
 
@@ -918,7 +924,7 @@ int8_t Modbus::process_FC5( uint16_t *regs, uint8_t u8size )
 {
     uint8_t u8currentRegister, u8currentBit;
     uint8_t u8CopyBufferSize;
-    uint16_t u16coil = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ] );
+    uint16_t u16coil = this->getMessageAddress();
 
     // point to the register and its bit
     u8currentRegister = (uint8_t) (u16coil / 16);
@@ -928,8 +934,8 @@ int8_t Modbus::process_FC5( uint16_t *regs, uint8_t u8size )
     bitWrite(
         regs[ u8currentRegister ],
         u8currentBit,
-        au8Buffer[ NB_HI ] == 0xff );
-
+        au8Buffer[ unsigned(ModbusMessageOffset::NB_HI) ] == 0xff
+        );
 
     // send answer to host
     u8BufferSize = 6;
@@ -950,14 +956,14 @@ int8_t Modbus::process_FC5( uint16_t *regs, uint8_t u8size )
 int8_t Modbus::process_FC6( uint16_t *regs, uint8_t u8size )
 {
 
-    uint8_t u8add = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ] );
+    uint8_t u8add = this->getMessageAddress();
     uint8_t u8CopyBufferSize;
-    uint16_t u16val = word( au8Buffer[ NB_HI ], au8Buffer[ NB_LO ] );
+    uint16_t u16val = this->getMessageCount();
 
     regs[ u8add ] = u16val;
 
     // keep the same header
-    u8BufferSize         = RESPONSE_SIZE;
+    u8BufferSize         = unsigned(ModbusMessageSize::RESPONSE);
 
     u8CopyBufferSize = u8BufferSize +2;
     sendTxBuffer();
@@ -981,8 +987,8 @@ int8_t Modbus::process_FC15( uint16_t *regs, uint8_t u8size )
     boolean bTemp;
 
     // get the first and last coil from the message
-    uint16_t u16StartCoil = word( au8Buffer[ ADD_HI ], au8Buffer[ ADD_LO ] );
-    uint16_t u16Coilno = word( au8Buffer[ NB_HI ], au8Buffer[ NB_LO ] );
+    uint16_t u16StartCoil = this->getMessageAddress();
+    uint16_t u16Coilno = this->getMessageCount();
 
 
     // read each coil from the register map and put its value inside the outcoming message
@@ -1031,24 +1037,21 @@ int8_t Modbus::process_FC15( uint16_t *regs, uint8_t u8size )
  */
 int8_t Modbus::process_FC16( uint16_t *regs, uint8_t u8size )
 {
-    uint8_t u8func = au8Buffer[ FUNC ];  // get the original FUNC code
-    uint8_t u8StartAdd = au8Buffer[ ADD_HI ] << 8 | au8Buffer[ ADD_LO ];
-    uint8_t u8regsno = au8Buffer[ NB_HI ] << 8 | au8Buffer[ NB_LO ];
+    uint8_t u8func = au8Buffer[ unsigned(ModbusMessageOffset::FUNC) ];  // get the original FUNC code
+    uint8_t u8StartAdd = this->getMessageAddress();
+    uint8_t u8regsno = this->getMessageCount();
     uint8_t u8CopyBufferSize;
     uint8_t i;
     uint16_t temp;
 
     // build header
-    au8Buffer[ NB_HI ]   = 0;
-    au8Buffer[ NB_LO ]   = u8regsno;
-    u8BufferSize         = RESPONSE_SIZE;
+    this->putMessageCount(u8regsno);
+    u8BufferSize         = unsigned(ModbusMessageSize::RESPONSE);
 
     // write registers
     for (i = 0; i < u8regsno; i++)
     {
-        temp = word(
-                   au8Buffer[ (BYTE_CNT + 1) + i * 2 ],
-                   au8Buffer[ (BYTE_CNT + 2) + i * 2 ]);
+        temp = this->getMessageWord(unsigned(ModbusMessageOffset::BYTE_CNT) + 1 + i * 2);
 
         regs[ u8StartAdd + i ] = temp;
     }
