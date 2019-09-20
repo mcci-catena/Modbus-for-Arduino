@@ -310,9 +310,8 @@ public:
     void setID( uint8_t u8id ); //!<write new ID for the device
     void end(); //!<finish any communication and release serial communication port
     bool isHost(void) const { return this->u8id == 0; }
+    bool isIdle(void) const { return this->u8state == CommState::IDLE; }
 };
-
-
 
 } // namespace McciCatena
 
