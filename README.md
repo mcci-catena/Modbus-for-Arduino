@@ -1,4 +1,4 @@
-# Modbus for Aruduino
+# Modbus for Arduino
 
 This library provides a Serial Modbus implementation for Arduino.
 
