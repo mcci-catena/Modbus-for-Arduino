@@ -1,30 +1,58 @@
-#######################################
-# Syntax Coloring Map For Modbus-for-Arduino
-#######################################
-
-#######################################
-# Datatypes (KEYWORD1)
-#######################################
-modbus_t	KEYWORD1
-
-#######################################
-# Methods and Functions (KEYWORD2)
-#######################################
-begin		KEYWORD2
-poll		KEYWORD2
-getInCnt	KEYWORD2
-getOutCnt	KEYWORD2
+cModbusDatagram	KEYWORD1
+complete	KEYWORD2
+operator=	KEYWORD2
+queue	KEYWORD2
+setDatagramCallback	KEYWORD2
+unlink	KEYWORD2
+cModbusDatagramQueue	KEYWORD1
+getFirst	KEYWORD2
+operator=	KEYWORD2
+peekFirst	KEYWORD2
+putTail	KEYWORD2
+cCatenaModbusRtuHost	KEYWORD1
+getPollResult	KEYWORD2
+operator=	KEYWORD2
+poll	KEYWORD2
+queue	KEYWORD2
+ModbusPort	KEYWORD1
+available	KEYWORD2
+begin	KEYWORD2
+drainRead	KEYWORD2
+drainWrite	KEYWORD2
+flush	KEYWORD2
+operator=	KEYWORD2
+read	KEYWORD2
+write	KEYWORD2
+ModbusSerial	KEYWORD1
+available	KEYWORD2
+begin	KEYWORD2
+drainWrite	KEYWORD2
+operator=	KEYWORD2
+read	KEYWORD2
+write	KEYWORD2
+modbus_datagram_t	KEYWORD1
+ModbusMessageSize	KEYWORD1
+ModbusMessageOffset	KEYWORD1
+ModbusFunction	KEYWORD1
+ModbusException_t	KEYWORD1
+Modbus	KEYWORD1
+begin	KEYWORD2
+end	KEYWORD2
 getErrCnt	KEYWORD2
-getID		KEYWORD2
+getID	KEYWORD2
+getInCnt	KEYWORD2
+getLastError	KEYWORD2
+getOutCnt	KEYWORD2
 getState	KEYWORD2
-query		KEYWORD2
+getTimeOut	KEYWORD2
+getTimeOutState	KEYWORD2
+isHost	KEYWORD2
+isIdle	KEYWORD2
+poll	KEYWORD2
+query	KEYWORD2
+setID	KEYWORD2
+setLastError	KEYWORD2
 setTimeOut	KEYWORD2
-
-#######################################
-# Instances (KEYWORD2)
-#######################################
-Modbus	KEYWORD2
-
-#######################################
-# Constants (LITERAL1)
-#######################################
+setTxEnableDelay	KEYWORD2
+Modbus::CommState	KEYWORD1
+Modbus::Error	KEYWORD1
