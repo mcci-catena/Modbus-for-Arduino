@@ -52,7 +52,7 @@
     (((major) << 24u) | ((minor) << 16u) | ((patch) << 8u) | (local))
 
 /// @brief the version of this library - increment on every addition/deletion
-#define	MCCI_MODBUS_RTU_ARDUINO_VERSION	MCCI_MODBUS_RTU_ARDUINO_VERSION_CALC(0, 4, 0, 0)        /* v0.4.0.0 */
+#define	MCCI_MODBUS_RTU_ARDUINO_VERSION	MCCI_MODBUS_RTU_ARDUINO_VERSION_CALC(0, 4, 10, 0)        /* v0.4.10.0 */
 
 /// @brief get major code
 #define	MCCI_MODBUS_RTU_ARDUINO_VERSION_GET_MAJOR(v)	\
