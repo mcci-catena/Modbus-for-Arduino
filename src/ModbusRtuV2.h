@@ -188,6 +188,12 @@ public:
     static constexpr unsigned kT35 = 5;
     static constexpr unsigned kMaxBuffer = 256; //!< maximum size for the communication buffer in bytes
 
+    /// @brief check whether address is a valid device address
+    static constexpr bool isDeviceAddress(uint8_t id)
+        {
+        return 1 <= id && id <= 247;
+        }
+
 private:
     uint16_t getMessageWord(unsigned offset) const
         {
