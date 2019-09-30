@@ -181,18 +181,132 @@ public:
     cCatenaModbusRtuHost(uint8_t u8id) : Super(u8id) {};
     cCatenaModbusRtuHost(uint8_t u8id, uint8_t u8txenpin) : Super(u8id, u8txenpin) {};
 
-    // the polling interface
-    // we save the poll() results for the background, or
-    // we might just want to look for completion other ways.
-    virtual void poll();
+    /**
+     * @brief
+     * Handle polling for cCatenaModbusRtuHost objects.
+     *
+     * We call the low-level host poll routine. If the poll result is other
+     * than Error::SUCCESS, and there's a datagram pending, we complete it.
+     * If the low-level host is now idle, and there's a datagram pending,
+     * promote it.
+     *
+     * @note This is in the header file due to Arduino build-system
+     * limitations.
+     */
+    virtual void poll()
+        {
+        auto const pollResult = this->m_lastPollResult = this->Super::poll();
+
+        // now... deal with promoting the queue.
+        // the poll result is != 0 for completion of the active datagram.
+        if (pollResult != Error::SUCCESS)
+            {
+            // if the current datagram represents a queued datagram,
+            // pull the datagram off the queue and complete.
+            auto const pDatagram = this->m_ActiveQueue.getFirst();
+
+            if (pDatagram != NULL)
+                pDatagram->complete(pollResult < Error::SUCCESS ? pollResult : Error::SUCCESS);
+            }
+
+        // now.... if not busy, and a datagram is pending, post it.
+        if (this->isIdle())
+            {
+            auto const pDatagram = this->m_PendingQueue.peekFirst();
+            if (pDatagram != nullptr)
+                {
+                auto const eSubmit = this->query(* dynamic_cast<modbus_datagram_t *>(pDatagram));
+                switch (eSubmit)
+                    {
+                case Error::POLLING:
+                    break;
+                case Error::SUCCESS:
+                    this->m_PendingQueue.getFirst();
+                    this->m_ActiveQueue.putTail(pDatagram);
+                    break;
+                default:
+                    this->m_PendingQueue.getFirst();
+                    pDatagram->complete(eSubmit);
+                    }
+                }
+            }
+        }
+
     Error getPollResult() const { return this->m_lastPollResult; }
 
-    // enqueue a request, and then start IO if needed.
-    void queue(cModbusDatagram *pDatagram, CatenaModbusRtu_DatagramCb_t *pCb, void *pClientInfo);
+    /**
+     * @brief
+     * Submit a datagram for asynchronous processing by the Modbus
+     * stack.
+     *
+     * The datagram is enqueued for processing by the Modbus stack. The library
+     * guarantees that the call-back function is called when processing of the
+     * datagram is complete.
+     *
+     * @param pDatagram datagram to be submitted. If null, an invalid parameter
+     *                  error will be reported.
+     * @param pCb       function to be called when processing is complete. If this is
+     *                  null, then this function call is completely ignored.
+     * @param pClientInfo  arbitrary data passed to the callback function.
+     *
+     * @note This is implemented in the header file to work around Arduino
+     *      build-system limitations.
+     */
+    void queue(
+        cModbusDatagram *pDatagram,
+        CatenaModbusRtu_DatagramCb_t *pCb,
+        void *pClientInfo
+        )
+        {
+        // check the parameter.
+        if (pCb == nullptr)
+            return;
+
+        // make sure we're configured as a host.
+        if (! this->isHost())
+            {
+            (pCb)(pClientInfo, pDatagram, Error::NOT_HOST);
+            return;
+            }
+
+        // if there's anybody ahead of us, wait in line.
+        if (this->m_PendingQueue.peekFirst() != nullptr)
+            {
+            this->m_PendingQueue.putTail(pDatagram, pCb, pClientInfo);
+            return;
+            }
+
+        // try to immediately submit.
+        auto const eSubmit = this->query(*pDatagram);
+
+        // it might have worked, or it might have been rejected.
+        switch (eSubmit)
+            {
+        // it worked.
+        case Error::SUCCESS:
+            // put the datagram in the active "queue"
+            this->m_ActiveQueue.putTail(pDatagram, pCb, pClientInfo);
+            break;
+
+        // rejected because the lower level is busy.
+        case Error::POLLING:
+            // put the datagram in the pending queue
+            this->m_PendingQueue.putTail(pDatagram, pCb, pClientInfo);
+            break;
+
+        // rejected for some other reason (invalid address, etc.)
+        default:
+            (*pCb)(pClientInfo, pDatagram, eSubmit);
+            break;
+            }
+        }
 
 private:
+    // the queue of datagrams waiting to be serviced.
     cModbusDatagramQueue m_PendingQueue;
+    // the queue; if not empty, this is the current datagram.
     cModbusDatagramQueue m_ActiveQueue;
+    // saved result from calling lower layer.
     Error m_lastPollResult = Error(0);
     };
 
