@@ -52,7 +52,7 @@
     (((major) << 24u) | ((minor) << 16u) | ((patch) << 8u) | (local))
 
 /// @brief the version of this library - increment on every addition/deletion
-#define	MCCI_MODBUS_RTU_ARDUINO_VERSION	MCCI_MODBUS_RTU_ARDUINO_VERSION_CALC(0, 4, 0, 0)        /* v0.4.0.0 */
+#define	MCCI_MODBUS_RTU_ARDUINO_VERSION	MCCI_MODBUS_RTU_ARDUINO_VERSION_CALC(0, 4, 10, 0)        /* v0.4.10.0 */
 
 /// @brief get major code
 #define	MCCI_MODBUS_RTU_ARDUINO_VERSION_GET_MAJOR(v)	\
@@ -187,6 +187,12 @@ public:
     // timeout between characters before we assume end of message.
     static constexpr unsigned kT35 = 5;
     static constexpr unsigned kMaxBuffer = 256; //!< maximum size for the communication buffer in bytes
+
+    /// @brief check whether address is a valid device address
+    static constexpr bool isDeviceAddress(uint8_t id)
+        {
+        return 1 <= id && id <= 247;
+        }
 
 private:
     uint16_t getMessageWord(unsigned offset) const
