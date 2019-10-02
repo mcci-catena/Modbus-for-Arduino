@@ -40,6 +40,11 @@ The library supports software serial as well as hardware serial. The initial cha
 - [The `ModbusSerial<>` Template Class](#the-modbusserial-template-class)
 - [Legacy names](#legacy-names)
 - [Queueing datagrams (host only)](#queueing-datagrams-host-only)
+- [Meta](#meta)
+	- [License](#license)
+	- [Contributors](#contributors)
+	- [Support Open Source Hardware and Software](#support-open-source-hardware-and-software)
+	- [Trademarks](#trademarks)
 
 <!-- /TOC -->
 <!-- markdownlint-restore -->
@@ -180,9 +185,29 @@ Declaring a Modbus instance takes two steps (which can be done in any order).
 
 For compatibility with earlier versions of this library, we supply the header file `ModbusRtu.h`.  This file includes `ModbusRtuV2.h`, and then exposes a number of names and types in the root namespace.
 
-Similarly, the legacy header file `Catena_ModbusRtu.h` calls `Catena_ModbusRtuHost.h` and defines a few names for backward compatibility.
+Similarly, the legacy header file `Catena_ModbusRtu.h` calls `Catena_ModbusRtuHost.h` and defines a few names for backward compatibility. It also exposes all the same names as `ModbusRtu.h`.
 
 ## Queueing datagrams (host only)
 
 Starting with v0.4.0, this library supports queued datagram operations with callbacks. To take advantage of this, declare your datagrams as `McciCatena::cModbusDatagram` objects (rather than `modbus_datagram_t` objects).  Create one or more callback functions of type `McciCatena::CatenaModbusRtu_DatagramCb_t`.
 Then use `cCatenaModbusRtuHost::queue()` to submit your datagrams; they'll be processed in FIFO order.
+
+## Meta
+
+### License
+
+This repository is released under the [LGPL 2.1](./LICENSE.md) license.
+
+### Contributors
+
+Samuel Marco i Armengol wrote the original [Modbus for Arduino]https://github.com/smarmengol/Modbus-Master-Slave-for-Arduino) library. Terry Moore refactored and made various minor functional changes for portability, compatibility with more Serial-like objects, and type safety.
+
+### Support Open Source Hardware and Software
+
+MCCI invests time and resources providing this open source code, please support MCCI and open-source hardware by purchasing products from MCCI, Adafruit and other open-source hardware/software vendors!
+
+For information about MCCI's products, please visit [mcci.com](https://mcci.com/) and [store.mcci.com](https://store.mcci.com/).
+
+### Trademarks
+
+MCCI and MCCI Catena are registered trademarks of MCCI Corporation. LoRaWAN is a registered trademark of the LoRa Alliance. LoRa is a registered trademark of Semtech Corporation. All other marks are the property of their respective owners.
