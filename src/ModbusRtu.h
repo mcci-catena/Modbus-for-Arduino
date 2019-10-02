@@ -52,26 +52,29 @@
  */
 using modbus_t = McciCatena::modbus_datagram_t;
 
-constexpr auto    RESPONSE_SIZE = unsigned(McciCatena::ModbusMessageSize::RESPONSE);
-constexpr auto    EXCEPTION_SIZE = unsigned(McciCatena::ModbusMessageSize::EXCEPTION);
-constexpr auto    CHECKSUM_SIZE = unsigned(McciCatena::ModbusMessageSize::CHECKSUM);
-
+enum
+{
+    RESPONSE_SIZE = unsigned(McciCatena::ModbusMessageSize::RESPONSE),
+    EXCEPTION_SIZE = unsigned(McciCatena::ModbusMessageSize::EXCEPTION),
+    CHECKSUM_SIZE = unsigned(McciCatena::ModbusMessageSize::CHECKSUM),
+};
 
 /**
  * @enum MESSAGE
  * @brief
- * Indexes to telegram frame positions
+ * Indices to datagram frame positions
  */
-using MESSAGE = McciCatena::ModbusMessageOffset;
-
-constexpr auto ID          = McciCatena::ModbusMessageOffset::ID;            //!< Index of ID field
-constexpr auto FUNC        = McciCatena::ModbusMessageOffset::FUNC;          //!< Index of Function code
-constexpr auto ADD_HI      = McciCatena::ModbusMessageOffset::ADD_HI;        //!< Index of Address high byte
-constexpr auto ADD_LO      = McciCatena::ModbusMessageOffset::ADD_LO;        //!< Index of Address low byte
-constexpr auto NB_HI       = McciCatena::ModbusMessageOffset::NB_HI;         //!< Index of Number of coils or registers high byte
-constexpr auto NB_LO       = McciCatena::ModbusMessageOffset::NB_LO;         //!< Index of Number of coils or registers low byte
-constexpr auto BYTE_CNT    = McciCatena::ModbusMessageOffset::BYTE_CNT;      //!< Index of byte counter
-constexpr auto EXCEPTION   = McciCatena::ModbusMessageOffset::EXCEPTION;     //!< Index in exception response of exception code.
+enum MESSAGE
+{
+    ID          = int(McciCatena::ModbusMessageOffset::ID),           //!< Index of ID field
+    FUNC        = int(McciCatena::ModbusMessageOffset::FUNC),         //!< Index of Function code
+    ADD_HI      = int(McciCatena::ModbusMessageOffset::ADD_HI),       //!< Index of Address high byte
+    ADD_LO      = int(McciCatena::ModbusMessageOffset::ADD_LO),       //!< Index of Address low byte
+    NB_HI       = int(McciCatena::ModbusMessageOffset::NB_HI),        //!< Index of Number of coils or registers high byte
+    NB_LO       = int(McciCatena::ModbusMessageOffset::NB_LO),        //!< Index of Number of coils or registers low byte
+    BYTE_CNT    = int(McciCatena::ModbusMessageOffset::BYTE_CNT),     //!< Index of byte counter
+    EXCEPTION   = int(McciCatena::ModbusMessageOffset::EXCEPTION),    //!< Index in exception response of exception code.
+};
 
 /**
  * @enum MB_FC
@@ -82,53 +85,112 @@ constexpr auto EXCEPTION   = McciCatena::ModbusMessageOffset::EXCEPTION;     //!
  * @see also fctsupported
  * @see also modbus_t
  */
-using MB_FC = McciCatena::ModbusFunction;
+enum MB_FC
+{
+    MB_FC_NONE                     = int(McciCatena::ModbusFunction::NONE),                 /*!< null operator */
+    MB_FC_READ_COILS               = int(McciCatena::ModbusFunction::READ_COILS),           /*!< FCT=1 -> read coils or digital outputs */
+    MB_FC_READ_DISCRETE_INPUT      = int(McciCatena::ModbusFunction::READ_DISCRETE_INPUT),  /*!< FCT=2 -> read digital inputs */
+    MB_FC_READ_REGISTERS           = int(McciCatena::ModbusFunction::READ_REGISTERS),       /*!< FCT=3 -> read registers or analog outputs */
+    MB_FC_READ_INPUT_REGISTER      = int(McciCatena::ModbusFunction::READ_INPUT_REGISTER),  /*!< FCT=4 -> read analog inputs */
+    MB_FC_WRITE_COIL               = int(McciCatena::ModbusFunction::WRITE_COIL),           /*!< FCT=5 -> write single coil or output */
+    MB_FC_WRITE_REGISTER           = int(McciCatena::ModbusFunction::WRITE_REGISTER),       /*!< FCT=6 -> write single register */
+    MB_FC_WRITE_MULTIPLE_COILS     = int(McciCatena::ModbusFunction::WRITE_MULTIPLE_COILS), /*!< FCT=15 -> write multiple coils or outputs */
+    MB_FC_WRITE_MULTIPLE_REGISTERS = int(McciCatena::ModbusFunction::WRITE_MULTIPLE_REGISTERS),/*!< FCT=16 -> write multiple registers */
+};
 
-constexpr auto MB_FC_NONE                     = McciCatena::ModbusFunction::NONE;                  /*!< null operator */
-constexpr auto MB_FC_READ_COILS               = McciCatena::ModbusFunction::READ_COILS;            /*!< FCT=1 -> read coils or digital outputs */
-constexpr auto MB_FC_READ_DISCRETE_INPUT      = McciCatena::ModbusFunction::READ_DISCRETE_INPUT;   /*!< FCT=2 -> read digital inputs */
-constexpr auto MB_FC_READ_REGISTERS           = McciCatena::ModbusFunction::READ_REGISTERS;        /*!< FCT=3 -> read registers or analog outputs */
-constexpr auto MB_FC_READ_INPUT_REGISTER      = McciCatena::ModbusFunction::READ_INPUT_REGISTER;   /*!< FCT=4 -> read analog inputs */
-constexpr auto MB_FC_WRITE_COIL               = McciCatena::ModbusFunction::WRITE_COIL;            /*!< FCT=5 -> write single coil or output */
-constexpr auto MB_FC_WRITE_REGISTER           = McciCatena::ModbusFunction::WRITE_REGISTER;        /*!< FCT=6 -> write single register */
-constexpr auto MB_FC_WRITE_MULTIPLE_COILS     = McciCatena::ModbusFunction::WRITE_MULTIPLE_COILS;  /*!< FCT=15 -> write multiple coils or outputs */
-constexpr auto MB_FC_WRITE_MULTIPLE_REGISTERS = McciCatena::ModbusFunction::WRITE_MULTIPLE_REGISTERS; /*!< FCT=16 -> write multiple registers */
+enum COMM_STATES
+{
+    COM_IDLE                     = int(McciCatena::Modbus::CommState::IDLE),
+    COM_WAITING                  = int(McciCatena::Modbus::CommState::WAITING),
+};
 
-using COMM_STATES = McciCatena::Modbus::CommState;
+enum ERR_LIST : int16_t
+{
+    ERR_SUCCESS                   = int16_t(McciCatena::Modbus::Error::SUCCESS),
+    ERR_NOT_HOST                  = int16_t(McciCatena::Modbus::Error::NOT_HOST),
+    ERR_POLLING                   = int16_t(McciCatena::Modbus::Error::POLLING),
+    ERR_BUFF_OVERFLOW             = int16_t(McciCatena::Modbus::Error::BUFF_OVERFLOW),
+    ERR_BAD_CRC                   = int16_t(McciCatena::Modbus::Error::BAD_CRC),
+    ERR_EXCEPTION                 = int16_t(McciCatena::Modbus::Error::EXCEPTION),
+    ERR_NO_REPLY                  = int16_t(McciCatena::Modbus::Error::NO_REPLY),
+    ERR_RUNT_PACKET               = int16_t(McciCatena::Modbus::Error::RUNT_PACKET),
+    ERR_ILLEGAL_DEVICE_ADDRESS    = int16_t(McciCatena::Modbus::Error::ILLEGAL_DEVICE_ADDRESS),
+};
 
-constexpr auto COM_IDLE                     = McciCatena::Modbus::CommState::IDLE;
-constexpr auto COM_WAITING                  = McciCatena::Modbus::CommState::WAITING;
+enum
+{
+    EXC_FUNC_CODE                 = int(McciCatena::ModbusException_t::ILLEGAL_FUNCTION),
+    EXC_ADDR_RANGE                = int(McciCatena::ModbusException_t::ILLEGAL_DATA_ADDRESS),
+    EXC_REGS_QUANT                = int(McciCatena::ModbusException_t::ILLEGAL_DATA_VALUE),
+    EXC_EXECUTE                   = int(McciCatena::ModbusException_t::SERVER_DEVICE_FAILURE),
+};
 
-using ERR_LIST = McciCatena::Modbus::Error;
-
-constexpr auto ERR_SUCCESS                   = McciCatena::Modbus::Error::SUCCESS;
-constexpr auto ERR_NOT_HOST                  = McciCatena::Modbus::Error::NOT_HOST;
-constexpr auto ERR_POLLING                   = McciCatena::Modbus::Error::POLLING;
-constexpr auto ERR_BUFF_OVERFLOW             = McciCatena::Modbus::Error::BUFF_OVERFLOW;
-constexpr auto ERR_BAD_CRC                   = McciCatena::Modbus::Error::BAD_CRC;
-constexpr auto ERR_EXCEPTION                 = McciCatena::Modbus::Error::EXCEPTION;
-constexpr auto ERR_NO_REPLY                  = McciCatena::Modbus::Error::NO_REPLY;
-constexpr auto ERR_RUNT_PACKET               = McciCatena::Modbus::Error::RUNT_PACKET;
-constexpr auto ERR_ILLEGAL_DEVICE_ADDRESS    = McciCatena::Modbus::Error::ILLEGAL_DEVICE_ADDRESS;
-
-constexpr auto EXC_FUNC_CODE        = McciCatena::ModbusException_t::ILLEGAL_FUNCTION;
-constexpr auto EXC_ADDR_RANGE       = McciCatena::ModbusException_t::ILLEGAL_DATA_ADDRESS;
-constexpr auto EXC_REGS_QUANT       = McciCatena::ModbusException_t::ILLEGAL_DATA_VALUE;
-constexpr auto EXC_EXECUTE          = McciCatena::ModbusException_t::SERVER_DEVICE_FAILURE;
-
-using MB_EXCEPTION = McciCatena::ModbusException_t;
-
-constexpr auto MB_EXC_ILLEGAL_FUNCTION        = McciCatena::ModbusException_t::ILLEGAL_FUNCTION;
-constexpr auto MB_EXC_ILLEGAL_DATA_ADDRESS    = McciCatena::ModbusException_t::ILLEGAL_DATA_ADDRESS;
-constexpr auto MB_EXC_ILLEGAL_DATA_VALUE      = McciCatena::ModbusException_t::ILLEGAL_DATA_VALUE;
-constexpr auto MB_EXC_SERVER_DEVICE_FAILURE   = McciCatena::ModbusException_t::SERVER_DEVICE_FAILURE;
-constexpr auto MB_EXC_ACKNOWLEDGE             = McciCatena::ModbusException_t::ACKNOWLEDGE;
-constexpr auto MB_EXC_SERVER_DEVICE_BUSY      = McciCatena::ModbusException_t::SERVER_DEVICE_BUSY;
-constexpr auto MB_MEMORY_PARITY_ERROR         = McciCatena::ModbusException_t::MEMORY_PARITY_ERROR;
-constexpr auto MB_GATEWAY_PATH_UNAVAILABLE    = McciCatena::ModbusException_t::GATEWAY_PATH_UNAVAILABLE;
-constexpr auto MB_GATEWAY_TARGET_DEVICE_FAILED_TO_RESPOND = McciCatena::ModbusException_t::GATEWAY_TARGET_DEVICE_FAILED_TO_RESPOND;
+enum MB_EXCEPTION: uint8_t
+{
+    MB_EXC_ILLEGAL_FUNCTION        = uint8_t(McciCatena::ModbusException_t::ILLEGAL_FUNCTION),
+    MB_EXC_ILLEGAL_DATA_ADDRESS    = uint8_t(McciCatena::ModbusException_t::ILLEGAL_DATA_ADDRESS),
+    MB_EXC_ILLEGAL_DATA_VALUE      = uint8_t(McciCatena::ModbusException_t::ILLEGAL_DATA_VALUE),
+    MB_EXC_SERVER_DEVICE_FAILURE   = uint8_t(McciCatena::ModbusException_t::SERVER_DEVICE_FAILURE),
+    MB_EXC_ACKNOWLEDGE             = uint8_t(McciCatena::ModbusException_t::ACKNOWLEDGE),
+    MB_EXC_SERVER_DEVICE_BUSY      = uint8_t(McciCatena::ModbusException_t::SERVER_DEVICE_BUSY),
+    MB_MEMORY_PARITY_ERROR         = uint8_t(McciCatena::ModbusException_t::MEMORY_PARITY_ERROR),
+    MB_GATEWAY_PATH_UNAVAILABLE    = uint8_t(McciCatena::ModbusException_t::GATEWAY_PATH_UNAVAILABLE),
+    MB_GATEWAY_TARGET_DEVICE_FAILED_TO_RESPOND = uint8_t(McciCatena::ModbusException_t::GATEWAY_TARGET_DEVICE_FAILED_TO_RESPOND),
+};
 
 #define T35         (McciCatenea::Modbus::kT35)
 #define MAX_BUFFER  (McciCatena::Modbus::kMaxBuffer)    //!< maximum size for the communication buffer in bytes
 
-using Modbus = McciCatena::Modbus;
+class Modbus : public McciCatena::Modbus
+    {
+private:
+    using Super = McciCatena::Modbus;
+
+public:
+    // constructors
+    Modbus() {}
+    Modbus(uint8_t u8id)
+        : Super::Modbus(u8id) 
+        {}
+    Modbus(uint8_t u8id, uint8_t u8txenpin)
+        : Super::Modbus(u8id, u8txenpin) 
+        {}
+
+//  void begin(ModbusPort *pPort, unsigned long u32speed)
+//      { this->Super::begin(port, )};
+//  void begin(ModbusPort *pPort, unsigned long u32speed, uint16_t u8config);
+//  void setTimeOut( uint16_t u16timeout); //!<write communication watch-dog timer
+//  void setTxEnableDelay(uint16_t u16txen_us); //!<set tx enable delay in us
+//  uint16_t getTimeOut(); //!<get communication watch-dog timer value
+//  boolean getTimeOutState(); //!<get communication watch-dog timer state
+    ERR_LIST query( modbus_t telegram ) //!<only for host
+        {
+        return ERR_LIST(this->Super::query(telegram));
+        }
+    int16_t poll() //!<cyclic poll for host
+        {
+        return int16_t(this->Super::poll());
+        }
+    int8_t poll( uint16_t *regs, uint8_t u8size ) //!<cyclic poll for device
+        {
+        return this->Super::poll(regs, u8size);
+        }
+//  uint16_t getInCnt(); //!<number of incoming messages
+//  uint16_t getOutCnt(); //!<number of outcoming messages
+//  uint16_t getErrCnt(); //!<error counter
+//  uint8_t getID(); //!<get device ID between 1 and 247
+    uint8_t getState()
+        {
+        return uint8_t(this->Super::getState());
+        }
+    ERR_LIST getLastError() //!<get last error value.
+        {
+        return ERR_LIST(this->Super::getLastError());
+        }
+    void setLastError(ERR_LIST errcode) //!<set last error value.
+        {
+        this->Super::setLastError(Error(errcode));
+        }
+//  void setID( uint8_t u8id ); //!<write new ID for the device
+//  void end(); //!<finish any communication and release serial communication port
+    };

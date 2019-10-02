@@ -52,7 +52,7 @@
     (((major) << 24u) | ((minor) << 16u) | ((patch) << 8u) | (local))
 
 /// @brief the version of this library - increment on every addition/deletion
-#define	MCCI_MODBUS_RTU_ARDUINO_VERSION	MCCI_MODBUS_RTU_ARDUINO_VERSION_CALC(0, 4, 10, 0)        /* v0.4.10.0 */
+#define	MCCI_MODBUS_RTU_ARDUINO_VERSION	MCCI_MODBUS_RTU_ARDUINO_VERSION_CALC(0, 4, 11, 0)        /* v0.4.11.0 */
 
 /// @brief get major code
 #define	MCCI_MODBUS_RTU_ARDUINO_VERSION_GET_MAJOR(v)	\
@@ -100,7 +100,7 @@ enum class ModbusMessageSize
 /**
  * @enum ModbusMessageOffset
  * @brief
- * Indexes to datagram frame positions
+ * Indices to datagram frame positions
  */
 enum class ModbusMessageOffset : uint8_t
 {
@@ -110,7 +110,7 @@ enum class ModbusMessageOffset : uint8_t
     ADD_LO, //!< Index of Address low byte
     NB_HI, //!< Index of Number of coils or registers high byte
     NB_LO, //!< Index of Number of coils or registers low byte
-    BYTE_CNT,  //!< Index of byte counter
+    BYTE_CNT,  //!< Index of byte count
 
     EXCEPTION = ModbusMessageOffset::FUNC + 1, //!< Index in exception response of exception code.
 };
@@ -118,8 +118,8 @@ enum class ModbusMessageOffset : uint8_t
 /**
  * @enum ModbusFunction
  * @brief
- * Modbus function codes summary.
- * These are the implement function codes either for host or for device.
+ * Modbus function codes.
+ * These are the implemented function codes either for host or for device.
  *
  * @see also fctsupported
  * @see also modbus_datagram_t
@@ -137,7 +137,13 @@ enum class ModbusFunction : uint8_t
     WRITE_MULTIPLE_REGISTERS = 16     /*!< FCT=16 -> write multiple registers */
 };
 
-// TODO(tmm@mcci.com) use values from MB_EXCEPTION instead
+/**
+ * @enum ModbusException_t
+ * @brief
+ * Modbus exception codes used in datagrams
+ *
+ * @see also modbus_datagram_t
+ */
 enum class ModbusException_t: uint8_t
     {
     ILLEGAL_FUNCTION = 1,
@@ -152,10 +158,10 @@ enum class ModbusException_t: uint8_t
     };
 
 /**
- * @class Modbus
+ * @class McciCatena::Modbus
  * @brief
  * Arduino class library for communicating with Modbus devices over
- * USB/RS232/485 (via RTU protocol).
+ * USB/RS232/485 (via RTU protocol). Can represent either host or device.
  */
 class Modbus
 {
