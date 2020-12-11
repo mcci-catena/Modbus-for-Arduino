@@ -155,6 +155,9 @@ public:
     Modbus(uint8_t u8id, uint8_t u8txenpin)
         : Super::Modbus(u8id, u8txenpin) 
         {}
+    Modbus(uint8_t u8id, uint8_t u8txenpin, uint8_t u8rxenpin)
+        : Super::Modbus(u8id, u8txenpin, u8rxenpin)
+        {}
 
 //  void begin(ModbusPort *pPort, unsigned long u32speed)
 //      { this->Super::begin(port, )};

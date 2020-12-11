@@ -94,6 +94,9 @@ void Modbus::begin(ModbusPort *pPort, unsigned long u32speed, uint16_t config)
         // return RS485 transceiver to receive mode
         pinMode(u8txenpin, OUTPUT);
         digitalWrite(u8txenpin, LOW);
+
+        pinMode(u8rxenpin, OUTPUT);
+        digitalWrite(u8rxenpin, LOW);
     }
 
     port->drainRead();
@@ -519,10 +522,19 @@ int8_t Modbus::poll( uint16_t *regs, uint8_t u8size )
 
 /* _____PRIVATE FUNCTIONS_____________________________________________________ */
 
+void Modbus::init(uint8_t u8id, uint8_t u8txenpin, uint8_t u8rxenpin)
+{
+    this->u8id = u8id;
+    this->u8txenpin = u8txenpin;
+    this->u8rxenpin = u8rxenpin;
+    this->u16timeOut = 1000;
+}
+
 void Modbus::init(uint8_t u8id, uint8_t u8txenpin)
 {
     this->u8id = u8id;
     this->u8txenpin = u8txenpin;
+    this->u8rxenpin = u8txenpin;
     this->u16timeOut = 1000;
 }
 
@@ -530,6 +542,7 @@ void Modbus::init(uint8_t u8id)
 {
     this->u8id = u8id;
     this->u8txenpin = 0;
+    this->u8rxenpin = 0;
     this->u16timeOut = 1000;
 }
 
@@ -598,6 +611,7 @@ void Modbus::sendTxBuffer()
     if (u8txenpin > 1)
     {
         digitalWrite( u8txenpin, HIGH );
+        digitalWrite( u8rxenpin, HIGH );
         delayMicroseconds(this->u16txenDelay);
     }
 
@@ -611,6 +625,7 @@ void Modbus::sendTxBuffer()
 
         // return RS485 transceiver to receive mode
         digitalWrite( u8txenpin, LOW );
+        digitalWrite( u8rxenpin, LOW );
     }
     port->drainRead();
 

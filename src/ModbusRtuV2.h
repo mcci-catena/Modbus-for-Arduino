@@ -239,6 +239,7 @@ private:
     uint16_t u16txenDelay;
     uint8_t u8id; //!< 0=host, 1..247=device number
     uint8_t u8txenpin; //!< flow control pin: 0=USB or RS-232 mode, >0=RS-485 mode
+    uint8_t u8rxenpin; //!< flow control pin: 0=USB or RS-232 mode, >0=RS-485 mode
     CommState u8state;
     uint8_t au8Buffer[kMaxBuffer];
     uint8_t u8BufferSize;
@@ -250,6 +251,7 @@ private:
     Error lastError;
     uint8_t u8regsize;
 
+    void init(uint8_t u8id, uint8_t u8txenpin, uint8_t u8rxenpin);
     void init(uint8_t u8id, uint8_t u8txenpin);
     void init(uint8_t u8id);
     void sendTxBuffer();
@@ -276,7 +278,7 @@ public:
      *
      * @ingroup setup
      */
-    Modbus() : u8id(0), u8txenpin(0), u16timeOut(1000) {};
+    Modbus() : u8id(0), u8txenpin(0), u8rxenpin(0), u16timeOut(1000) {};
 
     /**
      * @brief
@@ -287,7 +289,7 @@ public:
      * @overload Modbus::Modbus(uint8_t u8id)
      * @overload Modbus::Modbus()
      */
-    Modbus(uint8_t u8id) : u8id(u8id), u8txenpin(0), u16timeOut(1000) {};
+    Modbus(uint8_t u8id) : u8id(u8id), u8txenpin(0), u8rxenpin(0), u16timeOut(1000) {};
 
     /**
      * @brief
@@ -301,7 +303,23 @@ public:
      * @overload Modbus::Modbus(uint8_t u8id)
      * @overload Modbus::Modbus()
      */
-    Modbus(uint8_t u8id, uint8_t u8txenpin) : u8id(u8id), u8txenpin(u8txenpin), u16timeOut(1000) {};
+    Modbus(uint8_t u8id, uint8_t u8txenpin) : u8id(u8id), u8txenpin(u8txenpin), u8rxenpin(0), u16timeOut(1000) {};
+
+    /**
+     * @brief
+     * Full constructor for a host/device through USB/RS232C/RS485
+     * It needs a pin for flow control only for RS485 mode
+     *
+     * @param u8id   node address 0=host, 1..247=device
+     * @param u8txenpin pin for txen RS-485 (=0 means USB/RS232C mode)
+     * @param u8rxenpin pin for rxen RS-485 (=0 means USB/RS232C mode)
+     * @ingroup setup
+     * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8txenpin, uint8_t u8rxenpin)
+     * @overload Modbus::Modbus(uint8_t u8id, uint8_t u8txenpin)
+     * @overload Modbus::Modbus(uint8_t u8id)
+     * @overload Modbus::Modbus()
+     */
+    Modbus(uint8_t u8id, uint8_t u8txenpin, uint8_t u8rxenpin) : u8id(u8id), u8txenpin(u8txenpin), u8rxenpin(u8rxenpin), u16timeOut(1000) {};
 
     void begin(ModbusPort *pPort, unsigned long u32speed);
     void begin(ModbusPort *pPort, unsigned long u32speed, uint16_t u8config);

@@ -38,6 +38,9 @@ public:
     cCatenaModbusRtu(uint8_t u8id, uint8_t u8txenpin)
         : Super(u8id, u8txenpin) 
         {}
+    cCatenaModbusRtu(uint8_t u8id, uint8_t u8txenpin, uint8_t u8rxenpin)
+        : Super(u8id, u8txenpin, u8rxenpin)
+        {}
 
 //  void begin(ModbusPort *pPort, unsigned long u32speed)
 //      { this->Super::begin(port, )};

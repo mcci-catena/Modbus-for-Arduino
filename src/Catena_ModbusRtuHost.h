@@ -180,6 +180,7 @@ public:
     cCatenaModbusRtuHost() {};
     cCatenaModbusRtuHost(uint8_t u8id) : Super(u8id) {};
     cCatenaModbusRtuHost(uint8_t u8id, uint8_t u8txenpin) : Super(u8id, u8txenpin) {};
+    cCatenaModbusRtuHost(uint8_t u8id, uint8_t u8txenpin, uint8_t u8rxenpin) : Super(u8id, u8txenpin, u8rxenpin) {};
 
     /**
      * @brief
