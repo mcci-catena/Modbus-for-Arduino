@@ -89,14 +89,16 @@ void Modbus::begin(ModbusPort *pPort, unsigned long u32speed, uint16_t config)
 
     port->begin(u32speed, config);
 
-    if (u8txenpin > 1)   // pin 0 & pin 1 are reserved for RX/TX
+    if (this->isTxEnPinConfigured())
     {
-        // return RS485 transceiver to receive mode
-        pinMode(u8txenpin, OUTPUT);
-        digitalWrite(u8txenpin, LOW);
+        pinMode(this->u8txenpin, OUTPUT);
+        digitalWrite(this->u8txenpin, this->getTxDisableState());
+    }
 
-        pinMode(u8rxenpin, OUTPUT);
-        digitalWrite(u8rxenpin, LOW);
+    if (this->isRxEnPinConfigured())
+    {
+        pinMode(this->u8rxenpin, OUTPUT);
+        digitalWrite(this->u8rxenpin, this->getRxDisableState());
     }
 
     port->drainRead();
@@ -534,7 +536,7 @@ void Modbus::init(uint8_t u8id, uint8_t u8txenpin)
 {
     this->u8id = u8id;
     this->u8txenpin = u8txenpin;
-    this->u8rxenpin = u8txenpin;
+    this->u8rxenpin = 0;
     this->u16timeOut = 1000;
 }
 
@@ -607,25 +609,33 @@ void Modbus::sendTxBuffer()
     au8Buffer[ u8BufferSize ] = u16crc & 0x00ff;
     u8BufferSize++;
 
-    // set RS485 transceiver to transmit mode
-    if (u8txenpin > 1)
-    {
-        digitalWrite( u8txenpin, HIGH );
-        digitalWrite( u8rxenpin, HIGH );
+    // disable RX prior to enabling TX.
+    if (this->isRxEnPinConfigured())
+        digitalWrite(this->u8rxenpin, this->getRxDisableState());
+
+    // enable TX.
+    if (this->isTxEnPinConfigured())
+        digitalWrite(this->u8txenpin, this->getTxEnableState());
+
+    // wait for things to settle.
+    if (this->isTxEnPinConfigured())
         delayMicroseconds(this->u16txenDelay);
-    }
 
     // transfer buffer to serial line
     port->write( au8Buffer, u8BufferSize );
 
     // keep RS485 transceiver in transmit mode as long as sending
-    if (u8txenpin > 1)
+    if (this->isTxEnPinConfigured())
     {
         port->drainWrite();
 
-        // return RS485 transceiver to receive mode
-        digitalWrite( u8txenpin, LOW );
-        digitalWrite( u8rxenpin, LOW );
+        // disable transmitter.
+        if (this->isTxEnPinConfigured())
+            digitalWrite(this->u8txenpin, this->getTxDisableState());
+
+        // enable receiver
+        if (this->isRxEnPinConfigured())
+            digitalWrite(this->u8rxenpin, this->getRxEnableState());
     }
     port->drainRead();
 

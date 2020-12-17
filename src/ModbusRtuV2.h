@@ -341,6 +341,15 @@ public:
     void end(); //!<finish any communication and release serial communication port
     bool isHost(void) const { return this->u8id == 0; }
     bool isIdle(void) const { return this->u8state == CommState::IDLE; }
+
+    bool isTxEnPinConfigured() const{ return this->u8txenpin > 1; }
+    bool isRxEnPinConfigured() const{ return this->u8rxenpin > 1; }
+
+    bool getTxEnableState() const{ return true; }
+    bool getRxEnableState() const{ return false; }
+
+    bool getTxDisableState() const{ return false; }
+    bool getRxDisableState() const{ return true; }
 };
 
 } // namespace McciCatena
