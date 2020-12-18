@@ -35,6 +35,7 @@ public:
         virtual int available() const = 0;
         virtual int read() const = 0;
         virtual size_t write(const uint8_t *buffer, size_t size) const = 0;
+        virtual void end() const = 0;
 
         virtual void drainRead() const
                 {
@@ -91,6 +92,11 @@ public:
         virtual size_t write(const uint8_t *buffer, size_t size) const override
                 {
                 return this->m_pPort->write(buffer, size);
+                }
+
+        virtual void end() const override
+                {
+                this->m_pPort->end();
                 }
 
 private:

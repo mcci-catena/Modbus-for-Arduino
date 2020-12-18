@@ -109,6 +109,32 @@ void Modbus::begin(ModbusPort *pPort, unsigned long u32speed, uint16_t config)
 
 /**
  * @brief
+ *
+ * Clears the serial port.
+ *
+ * @see http://arduino.cc/en/Serial/End#.Uy4CJ6aKlHY
+ * @ingroup sleep
+ */
+void Modbus::end()
+{
+
+    port->end();
+
+    if (this->isTxEnPinConfigured())
+    {
+        pinMode(this->u8txenpin, OUTPUT);
+        digitalWrite(this->u8txenpin, this->getTxDisableState());
+    }
+
+    if (this->isRxEnPinConfigured())
+    {
+        pinMode(this->u8rxenpin, OUTPUT);
+        digitalWrite(this->u8rxenpin, this->getRxDisableState());
+    }
+}
+
+/**
+ * @brief
  * Method to write a new device address
  *
  * @param   u8id    new device address between 1 and 247
