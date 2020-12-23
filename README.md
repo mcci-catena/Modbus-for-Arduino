@@ -158,10 +158,10 @@ Declaring a Modbus instance takes two steps (which can be done in any order).
 1. Declare a `Modbus` instance that represents the host or device:
 
    ```c++
-   Modbus host(0, kTxPin);
+   Modbus host(0, kTxPin, kRxPin);
    ```
 
-   This declares a variable named `host`, which represents a Modbus controller. `kTxPin`, if non-zero, specifies the pin to be used to enable/disable TX.
+   This declares a variable named `host`, which represents a Modbus controller. `kTxPin`, if non-zero, specifies the pin to be used to enable/disable TX. `kRxPin`, if non-zero, specifies the pin to be used to enable/disable RX.
 
 2. Declare an object derived from `ModbusPort` to serve as the interface to the serial port. The easy way to do this is using the `ModbusSerial<>` template type.
 
